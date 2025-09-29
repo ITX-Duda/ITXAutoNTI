@@ -4,7 +4,7 @@
 
 ### **📝 Marco 1: Reunião de Alinhamento (Kickoff)**
 
-- [ ] **Criação do grupo de comunicação no Discord**(Responsável: Duda)
+- [x] **Criação do grupo de comunicação no Discord**(Responsável: Duda)
     
 - [ ] Reunião de planejamento com o Sergio: Apresentação do pré escopo inicial, alinhamento com ele sobre como documentar e como seguir o projeto sem perder tracking. (Responsável: Breno e Duda) 
 	

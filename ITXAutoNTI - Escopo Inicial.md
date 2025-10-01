@@ -34,6 +34,7 @@
 			- *Baseando em um cenário otimista (Po) = 11/2025*
 			- *Baseando em um cenário pessimista (Pp) = 01/2026*
 			- *Baseando em um cenário mais provável (Pmp) = 12/2025* 
+			
 			**Prazo esperado = (Po + 4Pmp + Pp) / 6**
 			= (11/2025 + 4×12/2025 + 01/2026) ÷ 6  
 			= ==12/2025==

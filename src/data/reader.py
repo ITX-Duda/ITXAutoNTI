@@ -9,11 +9,11 @@ def userName(api_url, app_token, user_token, session_token):
     }
 
     with httpx.Client(verify=False) as client: 
-        response = client.get(f"{api_url}/user/39160", headers=headers)
+        response = client.get(f"{api_url}/user/41411", headers=headers)
     
         if response.status_code == 200:
             usuario = response.json().get('firstname')
-            print("Usuário encontrado:")
-            print(usuario)
+            #print("Usuário encontrado:")
+            #print(usuario)
         else:
             print("Erro:", response.status_code, response.text)

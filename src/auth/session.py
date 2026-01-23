@@ -12,7 +12,7 @@ def autenticarGlpi(api_url, app_token, user_token): #variaveis vindas do .env
         response = httpx.get(f"{api_url}/initSession", headers=cartaoVisita, verify=False)
         response.raise_for_status()
         session_token = response.json().get('session_token')
-        print("Autenticação bem-sucedida.\n")
+        print("✅ Autenticação bem-sucedida.\n")
         return session_token
     except httpx.HTTPStatusError as e:
         print(f"Erro HTTP: {e.response.status_code} - {e.response.text}")

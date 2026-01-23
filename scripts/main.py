@@ -10,14 +10,17 @@ from src.utils.config_loader import chaves
 from src.auth.session import autenticarGlpi
 from src.data.reader import userName
 from src.logic.task_parser import parseTaskInstruction, Instruction
-from src.data.task_retriever import getDailyTasksMock
+from src.data.task_retriever import getItxTasks
 from src.logic.task_reporter import imprimirInstruction
+from src.data.aux import find_itx_mentions_in_tasks
 
 
 def main():
-    print("🚀 === GLPI ITXAutoNTI CONECÇÃO ===\n")
+    print("\n\n" + "-" * 60)
+    print("🚀 ====== ITXConexão =====")
+    print("-" * 60)
 
-    print("🔍 1. Carregando configurações...")
+    print("\n🔍 1. Carregando configurações...")
     apiUrl = chaves.get("GLPI_API_URL")
     appToken = chaves.get("GLPI_APP_TOKEN")
     userToken = chaves.get("GLPI_USER_TOKEN")
@@ -26,21 +29,36 @@ def main():
         print("❌ Erro: Configurações da API não encontradas no .env. Abortando.")
         return 
 
-    print(f"✅ Configurações OK: {apiUrl[:50]}...")
-
+    print(f"✅ Configurações OK.")
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#Autenticação
     print("\n🔐 2. Autenticando no GLPI...")
     sessionToken = autenticarGlpi(apiUrl, appToken, userToken)
 
     if sessionToken:
-        userName(apiUrl, appToken, userToken, sessionToken)
+        userNome = userName(apiUrl, appToken, userToken, sessionToken)
     else:
         print("❌ Erro: Autenticação falhou! Verifique tokens no .env")
         return 1
-    print("\n🎉 === CONEXÃO ITX CONCLUÍDA! ===")
-    
-    print("3. Task_Retriever (Mock)...")
-    tasks = getDailyTasksMock()
+    print("\n" + "-" * 60)
+    print("🎉 === ITXConexão - CONCLUIDO ===")
+    print("-" * 60)
 
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#Task Retriever 
+    print("\n\n\n" + "-" * 60)
+    print("👾⋆˚===== Task Retriever =====˖°👾")
+    print("-" * 60)
+    print("Apenas uma pesquisa dos chamados e das tasks que citam o ITXAutoNTI.\n")
+
+    tasks = getItxTasks(sessionToken, appToken, apiUrl)
+
+    print("\n" + "-" * 60)
+    print("👾⋆˚===== Task Retriever - CONCLUÍDO =====˖°👾")
+    print("-" * 60)
+
+"""#------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#Task Parser
     print("4. Task_Parser...")
     allInstructions: list[Instruction] = []
     for task in tasks:
@@ -48,6 +66,6 @@ def main():
         allInstructions.extend(taskInstructions)
 
     imprimirInstruction(allInstructions)
-
+"""
 if __name__ == "__main__":
     exit(main())

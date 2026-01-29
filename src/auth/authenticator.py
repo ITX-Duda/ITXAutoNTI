@@ -5,7 +5,7 @@ Este módulo usa os App-Token e User-Token para iniciar uma sessão.
 """
 
 import httpx
-from src.utils.config_loader import chaves # Importa as configurações do .env!
+from src.utils.config_loader import settings # Importa as configurações do .env!
 
 class Authenticator:
     """
@@ -15,9 +15,9 @@ class Authenticator:
         """
         Inicializa o autenticador carregando as configurações do .env.
         """
-        self.api_url = chaves.get("GLPI_API_URL")
-        self.app_token = chaves.get("GLPI_APP_TOKEN")
-        self.user_token = chaves.get("GLPI_USER_TOKEN")
+        self.api_url = settings.get("GLPI_API_URL")
+        self.app_token = settings.get("GLPI_APP_TOKEN")
+        self.user_token = settings.get("GLPI_USER_TOKEN")
         self.session_token = None
         self.client = None # O cliente HTTP será inicializado no login
 
@@ -33,6 +33,7 @@ class Authenticator:
         }
 
         try:
+            # verify=False ignora SSL. É OK para homologação, mas PERIGOSO em produção.
             response = httpx.get(f"{self.api_url}/initSession", headers=headers, verify=False)
             response.raise_for_status() # Lança um erro se a resposta for 4xx ou 5xx
             

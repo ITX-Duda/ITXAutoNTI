@@ -12,9 +12,3 @@ __pycache__/
 
 # Cache de Testes
 .pytest_cache/
-
-# Documentação local
-docs/
-
-# Scripts de debug
-scripts/debug_fields.py

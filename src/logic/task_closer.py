@@ -206,7 +206,7 @@ def close_task(
     # Mensagem final formatada 100% em HTML para o GLPI pular as linhas corretamente
     message = (
         f"{mention},<br><br>"
-        f"🤝 E ai meu chapa?<br><br>"
+        f"🤝 Ohh zé, bão?<br><br>"
         f"Executada e fechada com sucesso tarefa: #{task_id}<br><br>"
         f"{sucessos}/{total} Itens tratados:<br><br>"
         f"{texto_itens}"

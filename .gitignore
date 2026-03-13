@@ -18,3 +18,12 @@ docs/
 
 # Scripts de debug
 scripts/debug_fields.py
+.venv
+.gitignore
+
+historico_chamado_107713_task_15572_20260312_164527.csv
+.gitignore
+historico_chamado_107713_task_15572_20260312_163033.csv
+historico_chamado_107713_task_15572_20260312_163651.csv
+.gitignore
+src/logic/task_cleaner.py

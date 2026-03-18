@@ -114,7 +114,6 @@ def extrairCamposTask(textoHtml: str) -> dict:
         elif x == 0:
             raise ValueError("Nenhum status do ativo marcado!")
 
-    # LOCALIZAÇÃO
     matchLocal = re.search(r'localiza[çc][aã]o do ativo\s*:\s*(.+?)(?=$|\n\n)', 
                             textoLower, re.IGNORECASE)
     local = matchLocal.group(1).strip() if matchLocal else None
@@ -154,7 +153,7 @@ def extrairPatrimoniosPorTipo(textoHtml: str) -> dict:
 
     return dict(resultado)
 
-def findItemId(sessionToken: str, appToken: str, apiUrl: str, itemType:str, patrimonioItem:str,) -> tuple[str, str] | None:
+def encontraritemId(sessionToken: str, appToken: str, apiUrl: str, itemType:str, patrimonioItem:str,) -> tuple[str, str] | None:
     
     if not itemType or itemType == "None":
         print(f"⚠️  Pulando busca: itemType inválido '{itemType}' para patrimônio {patrimonioItem}")
@@ -256,7 +255,7 @@ def parseTaskInstruction(dadosTarefa: Dict[str, any], sessionToken: str, appToke
                 fuzzy_nome = match_local["Nome"] if match_local else ""
                 fuzzy_codigo = match_local["Codigo"] if match_local else ""
                 
-                itemData = findItemId(sessionToken, appToken, apiUrl, tipoGlpi, equipamentoIdStr)
+                itemData = encontraritemId(sessionToken, appToken, apiUrl, tipoGlpi, equipamentoIdStr)
                 
                 # --- SE NÃO ACHOU NO GLPI, MANDA PRO CSV COM ERRO ---
                 if not itemData:

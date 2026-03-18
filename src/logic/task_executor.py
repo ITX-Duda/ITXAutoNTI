@@ -12,15 +12,11 @@ from src.logic.task_parser import Instruction
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# ----------------------------------------------------------------------
-# Modelo de resultado para cada Instruction executada
-# ----------------------------------------------------------------------
-def getStatusELocalItem(apiUrl: str, headers: Dict[str, str], itemType: str, itemId: str) -> tuple[str, str]:
-    """Lê do GLPI o status e a localização ATUAIS do item."""
-    # Como garantimos que o itemId nulo já foi barrado, se chegar aqui é porque tem ID
+
+def informacoesItem(apiUrl: str, headers: Dict[str, str], itemType: str, itemId: str) -> tuple[str, str]:
+    
     url = f"{apiUrl.rstrip('/')}/{itemType}/{itemId}"
     
-    # IMPORTANTE: Esse parâmetro expand_dropdowns=true faz o GLPI enviar texto
     params = {"expand_dropdowns": "true"}
     resp = requests.get(url, headers=headers, params=params, verify=False)
 
@@ -28,9 +24,7 @@ def getStatusELocalItem(apiUrl: str, headers: Dict[str, str], itemType: str, ite
         return f"ERRO_{resp.status_code}", "N/A"
 
     data = resp.json()
-    
-    # Quando usamos expand_dropdowns=true, o GLPI geralmente retorna os valores textuais
-    # diretos nas chaves 'states_id' e 'locations_id'.
+
     statusName = str(data.get("states_id") or data.get("status") or "?")
     localName = str(data.get("locations_id") or data.get("location") or "?")
     
@@ -38,10 +32,6 @@ def getStatusELocalItem(apiUrl: str, headers: Dict[str, str], itemType: str, ite
 
 @dataclass
 class Result:
-    """
-    Resultado de cada operação no executor.
-    Vai pro TaskCloser gerar relatório + anexo.
-    """
     success: bool
     patrimonio: str
     itemId: str
@@ -58,23 +48,21 @@ class Result:
             f"status={self.lancStatusamento})"
         )
 
-def getLocationIdByCode(apiUrl: str, headers: dict, codigo: str, nome: str) -> str:
-    """Busca o ID interno da localização tentando pelo Código e depois pelo Nome."""
+def localizacaoCod(apiUrl: str, headers: dict, codigo: str, nome: str) -> str:
+
     url = f"{apiUrl.rstrip('/')}/search/Location"
     
-    # Tenta achar primeiro pelo código, se falhar, tenta pelo nome longo
     tentativas = [codigo, nome]
     
     for termo in tentativas:
         if not termo: continue
         
-        # Testa no campo 1 (Nome) e 200 (Nome Completo)
         for field in ["1", "200"]:
             params = {
                 "criteria[0][field]": field,
                 "criteria[0][searchtype]": "contains",
                 "criteria[0][value]": termo,
-                "forcedisplay[0]": "2"  # Força o GLPI a devolver a coluna com o ID numérico
+                "forcedisplay[0]": "2" 
             }
             try:
                 resp = requests.get(url, headers=headers, params=params, verify=False)
@@ -89,8 +77,7 @@ def getLocationIdByCode(apiUrl: str, headers: dict, codigo: str, nome: str) -> s
                 
     return None
 
-def getEstadoAtualItem(apiUrl: str, headers: Dict[str, str], itemType: str, itemId: int) -> str:
-    """Pega o estado ATUAL do item (como está no GLPI agora)."""
+def pegaStatusAtual(apiUrl: str, headers: Dict[str, str], itemType: str, itemId: int) -> str:
     url = f"{apiUrl.rstrip('/')}/{itemType}/{itemId}"
     resp = requests.get(url, headers=headers, verify=False)
 
@@ -98,31 +85,27 @@ def getEstadoAtualItem(apiUrl: str, headers: Dict[str, str], itemType: str, item
         return f"ERRO_GET_{resp.status_code}"
 
     data = resp.json()
-    # Aqui você ajusta para o nome real dos campos da API (numérico + nome)
     stateId = data.get("statusId") or "?"
     stateName = data.get("statusId_name") or "?"
     return f"{stateName} (ID:{stateId})"
 
 
 def gerarHistoricoCsv(results: List[Result], chamadoId: str, tarefaId: str) -> str:
-    # 1. Cria a pasta 'relatorios' automaticamente na raiz do projeto
+    # tá com erro, indo para a pasta errada
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     reports_dir = os.path.join(project_root, "relatorios")
     
     currentDir = os.getcwd()
     
-    # 2. Cria o caminho exato para a pasta relatorios e cria ela se não existir
     reports_dir = os.path.join(currentDir, "relatorios")
     os.makedirs(reports_dir, exist_ok=True)
-    
-    # 3. Nome e Caminho completo
+
     filename = f"historico_chamado_{chamadoId}_task_{tarefaId}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
     filepath = os.path.join(reports_dir, filename)
 
     with open(filepath, "w", newline="", encoding="utf-8") as csvfile:
         writer = csv.writer(csvfile)
 
-        # Cabeçalho
         writer.writerow(
             [
                 "Patrimônio",
@@ -144,7 +127,6 @@ def gerarHistoricoCsv(results: List[Result], chamadoId: str, tarefaId: str) -> s
             localAntes = ""
             localDepois = ""
 
-            # Quebra o lancStatusamento estruturado
             parts = result.lancStatusamento.split("|")
             for part in parts:
                 if part.startswith("STATUS_ANTES:"):
@@ -158,14 +140,14 @@ def gerarHistoricoCsv(results: List[Result], chamadoId: str, tarefaId: str) -> s
 
             writer.writerow(
                 [
-                    result.patrimonio,              # UF060553
-                    result.itemId,                  # 3758
-                    result.tipoItem,                # Computer
-                    result.action.upper(),          # INSERIR
-                    statusAntes,                    # Ativo
-                    statusDepois,                   # Em estoque
-                    localAntes,                     # CNS
-                    localDepois,                    # Devel
+                    result.patrimonio,
+                    result.itemId,
+                    result.tipoItem,
+                    result.action.upper(),
+                    statusAntes,
+                    statusDepois,
+                    localAntes,
+                    localDepois,
                     "OK" if result.success else "FALHOU",
                     result.erro or "",
                 ]
@@ -175,15 +157,7 @@ def gerarHistoricoCsv(results: List[Result], chamadoId: str, tarefaId: str) -> s
     return filepath
 
 
-def associar_item_ao_chamado(
-    apiUrl: str,
-    headers: Dict[str, str],
-    instruction: Instruction,
-) -> str:
-    """
-    Cria vínculo na tabela Item_Ticket.
-    Equivalente a clicar em 'Adicionar um item' dentro do chamado.
-    """
+def inserirItem(apiUrl: str, headers: Dict[str, str],instruction: Instruction,) -> str:
     ticket_id = int(instruction.chamadoId)
     itemId = int(instruction.itemId)
     itemtype = instruction.tipoItem
@@ -202,15 +176,8 @@ def associar_item_ao_chamado(
     return f"Assoc:{resp.status_code}"
 
 
-def remover_item_do_chamado(
-    apiUrl: str,
-    headers: Dict[str, str],
-    instruction: Instruction,
-) -> str:
-    """
-    Remove a associação item <-> ticket na tabela Item_Ticket,
-    buscando pelos vínculos do próprio chamado.
-    """
+def removerItem(apiUrl: str, headers: Dict[str, str], instruction: Instruction,) -> str:
+
     ticket_id = instruction.chamadoId
     itemId = int(instruction.itemId)
     itemtype = instruction.tipoItem
@@ -241,16 +208,8 @@ def remover_item_do_chamado(
     return f"Removidos {len(vinculos)} vínculos"
 
 
-def execute_from_parsed_task(
-    sessionToken: str,
-    appToken: str,
-    apiUrl: str,
-    taskInstructions: List[Instruction],
-) -> List[Result]:
-    """
-    Recebe a lista de Instruction gerada pelo parser e executa
-    as ações no GLPI para cada uma, gerando também o CSV de histórico.
-    """
+def execucaoPosParser(sessionToken: str, appToken: str, apiUrl: str, taskInstructions: List[Instruction],) -> List[Result]:
+
     results: List[Result] = []
 
     headers = {
@@ -265,7 +224,7 @@ def execute_from_parsed_task(
 
     for i, instruction in enumerate(taskInstructions, 1):
         print(f"  {i:2d}/{total} {instruction.patrimonioItem} ({instruction.tipoItem})...")
-        result = process_single_asset(apiUrl, headers, instruction)
+        result = execucaoUnica(apiUrl, headers, instruction)
         results.append(result)
 
         if result.success:
@@ -287,23 +246,19 @@ def execute_from_parsed_task(
     return results, None
 
 
-def process_single_asset(
-    apiUrl: str,
-    headers: Dict[str, str],
-    instruction: Instruction,
-) -> Result:
+def execucaoUnica(apiUrl: str, headers: Dict[str, str], instruction: Instruction,) -> Result:
     
     if not instruction.itemId:
         return Result(
             success=False,
-            patrimonio=instruction.patrimonioItem, # Vai salvar "12345"
+            patrimonio=instruction.patrimonioItem,
             itemId="N/A",
             chamadoId=instruction.chamadoId,
             tarefaId=instruction.tarefaId,
             tipoItem=instruction.tipoItem,
             lancStatusamento="STATUS_ANTES:N/A|STATUS_DEPOIS:N/A|LOCAL_ANTES:N/A|LOCAL_DEPOIS:N/A|UPDATE:N/A|ASSOC:N/A",
             action=instruction.acaoItem,
-            erro="NOK - Item não cadastrado no GLPI" # Vai aparecer na coluna J
+            erro="NOK - Item não cadastrado no GLPI"
         )
     
     patrimonio = instruction.patrimonioItem
@@ -311,14 +266,12 @@ def process_single_asset(
     tarefaId = instruction.tarefaId
     itemId = int(instruction.itemId)
     itemType = instruction.tipoItem
-    action = (instruction.acaoItem or "").lower()           # "inserir" / "remover"
-    textoStatus = (instruction.statusItem or "").lower()    # "ativo", "em estoque", etc.
-    novaLocal = instruction.localItem or ""                 # "Devel" vindo da task
+    action = (instruction.acaoItem or "").lower()
+    textoStatus = (instruction.statusItem or "").lower()
+    novaLocal = instruction.localItem or ""
 
-    # Lê STATUS e LOCALIZAÇÃO ANTES da alteração
-    statusAntes, localAntes = getStatusELocalItem(apiUrl, headers, itemType, itemId)
+    statusAntes, localAntes = informacoesItem(apiUrl, headers, itemType, itemId)
 
-    # Mapeia texto → ID numérico do GLPI
     mapStatus = {
         "ativo": 7,
         "desfeito": 13,
@@ -336,26 +289,25 @@ def process_single_asset(
     realStatus = mapStatus.get(textoStatus)
 
     fields: Dict[str, Any] = {}
-    fields["id"] = int(itemId) # IMPORTANTE: O GLPI exige o ID do item dentro do payload no PUT
+    fields["id"] = int(itemId)
 
     if realStatus is not None:
-        # ajuste para o nome do campo de status numérico no seu GLPI
+
         fields["statusId"] = realStatus
 
-    # --- INÍCIO DA MÁGICA DA LOCALIZAÇÃO ---
+
     if getattr(instruction, "localFuzzyCodigo", None):
-        loc_id = getLocationIdByCode(apiUrl, headers, instruction.localFuzzyCodigo, instruction.localFuzzyNome)
+        loc_id = localizacaoCod(apiUrl, headers, instruction.localFuzzyCodigo, instruction.localFuzzyNome)
         if loc_id:
             fields["locations_id"] = int(loc_id)
         else:
             print(f"⚠️ Aviso: ID numérico não encontrado no GLPI para o código {instruction.localFuzzyCodigo}")
-    # --- FIM DA MÁGICA ---
+
 
     msgUpdate = "Sem alterações"
     msgAssoc = "Sem associação"
 
     try:
-        # Atualiza STATUS e/ou LOCALIZAÇÃO se houver algo além do próprio 'id' no fields
         if len(fields) > 1: 
             itemUrl = f"{apiUrl.rstrip('/')}/{itemType}/{itemId}"
             rUpdate = requests.put(
@@ -366,19 +318,17 @@ def process_single_asset(
             )
             msgUpdate = f"Upd:{rUpdate.status_code}"
 
-        # Associa / remove item do chamado
+
         if action == "inserir":
-            msgAssoc = associar_item_ao_chamado(apiUrl, headers, instruction)
+            msgAssoc = inserirItem(apiUrl, headers, instruction)
         elif action == "remover":
-            msgAssoc = remover_item_do_chamado(apiUrl, headers, instruction)
+            msgAssoc = removerItem(apiUrl, headers, instruction)
         else:
             msgAssoc = f"Ação desconhecida: {instruction.acaoItem}"
 
-        # Lê STATUS depois (local depois vamos considerar o da task)
-        statusDepois, _ = getStatusELocalItem(apiUrl, headers, itemType, itemId)
+        statusDepois, _ = informacoesItem(apiUrl, headers, itemType, itemId)
         localDepois = novaLocal or localAntes
 
-        # String estruturada para o CSV
         lancStatus = (
             f"STATUS_ANTES:{statusAntes}"
             f"|STATUS_DEPOIS:{statusDepois}"

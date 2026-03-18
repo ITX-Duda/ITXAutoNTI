@@ -6,80 +6,18 @@ from bs4 import BeautifulSoup
 from typing import List, Dict
 from collections import defaultdict
 
-"""
-
-"""
-
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-"""
-def normalizarNumero(n):
-    return str(int(n))  # remove zeros à esquerda
 
-def extrairCamposTask(html_texto: str) -> dict:
-    if not html_texto:
-        return {}
-    
-    html_texto = html.unescape(html_texto)
-    soup = BeautifulSoup(html_texto, "html.parser")
-
-    # Remove tabela (equipamentos são tratados em outra função)
-    for tabela in soup.find_all("table"):
-        tabela.decompose()
-
-    # Texto limpo
-    texto = soup.get_text("\n", strip=True)
-
-    # Extrai campos
-    acao_match = re.search(r'ação\s*:\s*(.+)', texto, re.IGNORECASE)
-    local_match = re.search(r'localiza[çc][aã]o do ativo\s*:\s*(.+)', texto, re.IGNORECASE)
-
-    acao = acao_match.group(1).strip() if acao_match else None
-    local = local_match.group(1).strip() if local_match else None
-
-    return {
-        "acao": acao.lower() if acao else None,
-        "localizacao": local.lower() if local else None
-    }
-
-def extrairPatrimoniosPorTipo(html_texto: str) -> dict:
-    if not html_texto:
-        return {}
-
-    html_texto = html.unescape(html_texto)
-    soup = BeautifulSoup(html_texto, "html.parser")
-
-    resultado = defaultdict(list)
-
-    for row in soup.find_all("tr")[1:]:  # pula cabeçalho
-        cols = row.find_all("td")
-        if len(cols) < 2:
-            continue
-
-        tipo = cols[0].get_text(strip=True).lower()
-        celula = cols[1].get_text(" ", strip=True)
-
-        numeros = re.findall(r'\d+', celula)
-
-        for n in numeros:
-            resultado[tipo].append(normalizarNumero(n))
-
-    # remove duplicados e ordena
-    for tipo in resultado:
-        resultado[tipo] = sorted(set(resultado[tipo]), key=int)
-
-    return dict(resultado)
-"""
-
-def getItxTasks(sessionToken: str, appToken: str, apiUrl: str) -> List[Dict]:
+def pegaTarefas(sessionToken: str, appToken: str, apiUrl: str) -> List[Dict]:
     headers = {
         "Content-Type": "application/json",
         "Session-Token": sessionToken,
         "App-Token": appToken
     }
 
-# ===========================================================================
+# =========================================================================
 # BUSCA DOS CHAMADOS
-# ===========================================================================
+# =============================================================================
     urlPesquisa = f"{apiUrl.rstrip('/')}/search/Ticket"
     parametrosPesquisa = {
         # Chamados da CGP:
@@ -193,7 +131,6 @@ def getItxTasks(sessionToken: str, appToken: str, apiUrl: str) -> List[Dict]:
     totalWidth = 60
     separator_width = sum(widths) + 6  # 12+10+14+6=42
 
-    # Header
     header = (
         f"{'🧩 Task':^{widths[0]}}│"
         f"{'🎫 Chamado':^{widths[1]}}│"
@@ -201,11 +138,8 @@ def getItxTasks(sessionToken: str, appToken: str, apiUrl: str) -> List[Dict]:
     )
     print(header.center(totalWidth))
 
-    # Separator
     separator_str = "─" * separator_width
     print(separator_str.center(totalWidth))
-
-    # Dados
     for task in foundTasks:
         line = (
             f"{str(task['taskId']):>10}│"
@@ -214,10 +148,8 @@ def getItxTasks(sessionToken: str, appToken: str, apiUrl: str) -> List[Dict]:
         )
         print(line.center(totalWidth))
 
-    # Separator final
     print(separator_str.center(totalWidth))
 
-    # Totais
     chamados = len(set(t['ticketId'] for t in foundTasks))
     tasks = len(foundTasks)
     print(f"📦 Chamados: {chamados} │ 🍧 Tasks: {tasks}".center(totalWidth))

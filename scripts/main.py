@@ -9,9 +9,9 @@ from src.utils.config_loader import chaves
 from src.auth.session import autenticarGlpi
 from src.data.reader import userName
 from src.logic.task_parser import parseTaskInstruction, Instruction
-from src.data.task_retriever import getItxTasks
-from src.logic.task_executor import execute_from_parsed_task
-from src.logic.task_closer import close_task
+from src.data.task_retriever import pegaTarefas
+from src.logic.task_executor import execucaoPosParser
+from src.logic.task_closer import encerraFluxo
 
 def main():
     print("\n\n" + "-" * 60)

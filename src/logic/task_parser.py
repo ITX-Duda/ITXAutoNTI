@@ -13,11 +13,11 @@ from src.logic.fuzzy_localizacao import getLocalizacaoFuzzy
 
 @dataclass
 class Instruction:
-    itemId: str                 #index do equipamento
-    patrimonioItem: str         #Prefixo+Numero
-    statusItem: str             #Ativo/Desfazimento/Em andamento/Em manutenção
-    acaoItem: str               #Inserir/Exluir
-    localItem: str              #SS15/Depósito/Biblioteca
+    itemId: str                 # index do equipamento
+    patrimonioItem: str         # Prefixo+Numero
+    statusItem: str             # Ativo/Desfazimento/Em andamento/Em manutenção
+    acaoItem: str               # Inserir/Excluir
+    localItem: str              # SS15/Depósito/Biblioteca
     localFuzzyNome: str
     localFuzzyCodigo: str
     tipoItem: str
@@ -58,71 +58,77 @@ def extrairCamposTask(textoHtml: str) -> dict:
     if not textoHtml:
         return {}
 
+    # Limpeza inicial
     textoHtml = html.unescape(textoHtml)
     soup = BeautifulSoup(textoHtml, "html.parser")
 
+    # Remove tabelas e a linha de dica para não interferir na contagem de (X)
     for tabela in soup.find_all("table"):
         tabela.decompose()
+    
+    texto = soup.get_text("\n", strip=True)
+    
+    # Remove a linha de dica especificamente para não contar o "(X)" de exemplo
+    linhas = [l for l in texto.split("\n") if "* dica:" not in l.lower()]
+    textoLimpo = "\n".join(linhas)
 
-    texto = soup.get_text("\n", strip = True)
-    textoLower = texto.lower()
+    # Regex que aceita qualquer caractere (ou espaço) dentro dos parênteses
+    regexMarcador = r'\(\s*[^)\s]+\s*\)'
 
-    linhas = [l for l in textoLower.split("\n") if not l.strip().startswith("* dica:")]
-    textoLower = "\n".join(linhas)
-
+    # --- EXTRAÇÃO DA AÇÃO ---
     matchAcao = re.search(
-    r'ação\s*:\s*(.+?)(?=\s*status do ativo:|localiza[çc][aã]o do ativo:|table|$)',
-    textoLower, re.IGNORECASE | re.DOTALL
-)
+        r'ação\s*:\s*(.+?)(?=status do ativo:|localiza[çc][aã]o do ativo:|$)',
+        textoLimpo, re.IGNORECASE | re.DOTALL
+    )
 
-    matchValor = None
-
+    valorAcao = None
     if matchAcao:
         blocoAcao = matchAcao.group(1)
-        x = len(re.findall(r'\(x\)', blocoAcao, re.IGNORECASE))
-
-        if x > 1:
-            raise ValueError(f"Múltiplas ações marcadas ({x} '(X)')")
-        elif x == 0:
-            raise ValueError("Nenhuma ação marcada! Use (X) Inserir ou (X) Remover")
-        if re.search(r'\(x\)\s*inserir', blocoAcao, re.IGNORECASE):
+        # Encontra todos os parênteses que NÃO estão vazios
+        marcacoes = re.findall(regexMarcador, blocoAcao)
+        
+        if len(marcacoes) > 1:
+            raise ValueError(f"Múltiplas ações marcadas {marcacoes}")
+        
+        if re.search(rf'{regexMarcador}\s*inserir', blocoAcao, re.IGNORECASE):
             valorAcao = "inserir"
-        elif re.search(r'\(x\)\s*remover', blocoAcao, re.IGNORECASE):
+        elif re.search(rf'{regexMarcador}\s*remover', blocoAcao, re.IGNORECASE):
             valorAcao = "remover"
+
+    if not valorAcao:
+        raise ValueError("Nenhuma ação marcada! Use (X) Inserir ou (X) Remover")
+
+    # --- EXTRAÇÃO DO STATUS ---
     matchStatus = re.search(
-    r'status do ativo\s*:\s*(.+?)(?=\s*localiza[çc][aã]o do ativo:|table|$)',
-    textoLower, re.IGNORECASE | re.DOTALL
-)
+        r'status do ativo\s*:\s*(.+?)(?=localiza[çc][aã]o do ativo:|$)',
+        textoLimpo, re.IGNORECASE | re.DOTALL
+    )
     
     valorStatus = None
     if matchStatus:
-        blocoStatus = matchStatus.group(1)
+        blocoStatus = matchStatus.group(1).replace('\n', ' ') # Remove quebras de linha para a regex não falhar
         opcoesStatus = [
             "em estoque", "ativo", "desfeito", "irrecuperável", 
             "obsoleto", "disponível para empréstimo", "emprestado", 
             "manutenção", "ocioso"
         ]
         
-        x = 0
         for opcao in opcoesStatus:
-            if re.search(rf'\(x\)\s*{re.escape(opcao)}', blocoStatus, re.IGNORECASE):
+            if re.search(rf'{regexMarcador}\s*{re.escape(opcao)}', blocoStatus, re.IGNORECASE):
                 valorStatus = opcao
-                x += 1
-        
-        if x > 1:
-            raise ValueError(f"Múltiplos status marcados ({x})!")
-        elif x == 0:
-            raise ValueError("Nenhum status do ativo marcado!")
+                break
 
-    # LOCALIZAÇÃO
-    matchLocal = re.search(r'localiza[çc][aã]o do ativo\s*:\s*(.+?)(?=$|\n\n)', 
-                            textoLower, re.IGNORECASE)
+    # --- EXTRAÇÃO DA LOCALIZAÇÃO ---
+    matchLocal = re.search(
+        r'localiza[çc][aã]o do ativo\s*:\s*(.+)', 
+        textoLimpo, re.IGNORECASE
+    )
     local = matchLocal.group(1).strip() if matchLocal else None
 
     return {
         "acao": valorAcao,
-        "statusAtivo": valorStatus,
-        "localizacao": local,
+        "statusAtivo": valorStatus, 
+        "localizacao": local,       
     }
 
 def extrairPatrimoniosPorTipo(textoHtml: str) -> dict:
@@ -154,10 +160,10 @@ def extrairPatrimoniosPorTipo(textoHtml: str) -> dict:
 
     return dict(resultado)
 
-def findItemId(sessionToken: str, appToken: str, apiUrl: str, itemType:str, patrimonioItem:str,) -> tuple[str, str] | None:
+def findItemId(sessionToken: str, appToken: str, apiUrl: str, itemType: str, patrimonioItem: str) -> tuple[str, str] | None:
     
     if not itemType or itemType == "None":
-        print(f"⚠️  Pulando busca: itemType inválido '{itemType}' para patrimônio {patrimonioItem}")
+        print(f"⚠️ Pulando busca: itemType inválido '{itemType}' para patrimônio {patrimonioItem}")
         return None
     
     headers = {
@@ -172,37 +178,36 @@ def findItemId(sessionToken: str, appToken: str, apiUrl: str, itemType:str, patr
     urlPesquisa = f"{apiUrl.rstrip('/')}/search/{itemType}"
 
     parametros = {
-        #
         "criteria[0][field]": "1", # patrimonio
         "criteria[0][searchtype]": "contains",
         "criteria[0][value]": patrimonioItem, 
-
         "forcedisplay[0]": "2",
         "forcedisplay[1]": "1",
     }
+    
     resp = requests.get(urlPesquisa, headers=headers, params=parametros, verify=False)
     resp.raise_for_status()
     data = resp.json()
     resultado = data.get("data", [])
+    
     if not resultado:
         return None
 
     primeiraColuna = resultado[0]
-    itemId  = primeiraColuna.get("2")  # id interno
-    nome    = primeiraColuna.get("1")  # nome (UF038380)
+    itemId = primeiraColuna.get("2")  # id interno
+    itemNome = primeiraColuna.get("1")  # nome (ex: UF038380)
 
-    if not itemId or not nome:
+    if not itemId or not itemNome:
         return None
 
-    return str(itemId), str(nome)
+    return str(itemId), str(itemNome)
 
 
-def parseTaskInstruction(dadosTarefa: Dict[str, any], sessionToken: str, appToken: str, apiUrl: str) -> List[Instruction]:
+def parseTaskInstruction(dadosTarefa: Dict[str, Any], sessionToken: str, appToken: str, apiUrl: str) -> List[Instruction]:
 
     chamadoId = str(dadosTarefa.get("ticketId") or dadosTarefa.get("ticket_id") or "")
     tarefaId = str(dadosTarefa.get("taskId") or dadosTarefa.get("task_id") or "")
 
-    
     # Pega content da task
     content = dadosTarefa.get("content")
     if not content:
@@ -218,17 +223,13 @@ def parseTaskInstruction(dadosTarefa: Dict[str, any], sessionToken: str, appToke
         statusAtivo = campos.get("statusAtivo")
         localItem = campos.get("localizacao")
         
-        # Validações
+        # Validações (Status e Local agora são opcionais e não quebram o código)
         if not acaoItem:
             raise ValueError("Nenhuma ação marcada!")
-        if not statusAtivo:
-            raise ValueError("Nenhum status do ativo marcado!")
         if not patrimoniosPorTipo:
             raise ValueError("Nenhum patrimônio na tabela!")
-        if not localItem:
-            raise ValueError("Localização do ativo não informada!")
         
-        print(f"✅ Task {tarefaId}: {acaoItem}/{statusAtivo}/{localItem}")
+        print(f"✅ Task {tarefaId}: Ação: {acaoItem} / Status: {statusAtivo} / Local: {localItem}")
         
     except ValueError as e:
         print(f"❌ Task {tarefaId} inválida: {e}")
@@ -242,53 +243,47 @@ def parseTaskInstruction(dadosTarefa: Dict[str, any], sessionToken: str, appToke
             print(f"⚠️ Tipo '{tipo}' não mapeado")
             continue
         
-        for tipo, listaIds in patrimoniosPorTipo.items():
-            tipoGlpi = tipoMap.get(tipo.lower())
-            if not tipoGlpi:
-                print(f"⚠️ Tipo '{tipo}' não mapeado")
-                continue
+        for equipamentoId in listaIds:
+            equipamentoIdStr = str(equipamentoId)
             
-            for equipamentoId in listaIds:
-                equipamentoIdStr = str(equipamentoId)
-                
-                # Chama o fuzzy independente de achar o item, pois a task pediu um local
-                match_local = getLocalizacaoFuzzy(localItem)
-                fuzzy_nome = match_local["Nome"] if match_local else ""
-                fuzzy_codigo = match_local["Codigo"] if match_local else ""
-                
-                itemData = findItemId(sessionToken, appToken, apiUrl, tipoGlpi, equipamentoIdStr)
-                
-                # --- SE NÃO ACHOU NO GLPI, MANDA PRO CSV COM ERRO ---
-                if not itemData:
-                    instructions.append(Instruction(
-                        itemId="",  # Deixamos vazio para o executor saber que falhou
-                        patrimonioItem=equipamentoIdStr, # Só o número digitado na task
-                        chamadoId=chamadoId,
-                        tarefaId=tarefaId,
-                        acaoItem=acaoItem,
-                        localItem=localItem,
-                        localFuzzyNome=fuzzy_nome,
-                        localFuzzyCodigo=fuzzy_codigo,
-                        statusItem=statusAtivo,
-                        tipoItem=tipoGlpi,
-                    ))
-                    continue
-                # ---------------------------------------------------
-                
-                # Se achou no GLPI, segue o jogo normal:
-                itemId, itemNome = itemData
-                
+            # Chama o fuzzy com proteção caso o localItem venha vazio (None)
+            matchLocal = getLocalizacaoFuzzy(localItem) if localItem else None
+            fuzzyNome = matchLocal["Nome"] if matchLocal else ""
+            fuzzyCodigo = matchLocal["Codigo"] if matchLocal else ""
+            
+            itemData = findItemId(sessionToken, appToken, apiUrl, tipoGlpi, equipamentoIdStr)
+            
+            # --- SE NÃO ACHOU NO GLPI, MANDA PRO CSV COM ERRO ---
+            if not itemData:
                 instructions.append(Instruction(
-                    itemId=itemId,
-                    patrimonioItem=itemNome,
+                    itemId="",  # Deixamos vazio para o executor saber que falhou
+                    patrimonioItem=equipamentoIdStr, # Só o número digitado na task
                     chamadoId=chamadoId,
                     tarefaId=tarefaId,
                     acaoItem=acaoItem,
-                    localItem=localItem,
-                    localFuzzyNome=fuzzy_nome,
-                    localFuzzyCodigo=fuzzy_codigo,
-                    statusItem=statusAtivo,
+                    localItem=localItem or "",
+                    localFuzzyNome=fuzzyNome,
+                    localFuzzyCodigo=fuzzyCodigo,
+                    statusItem=statusAtivo or "",
                     tipoItem=tipoGlpi,
                 ))
-        
-        return instructions
+                continue
+            # ---------------------------------------------------
+            
+            # Se achou no GLPI, segue o jogo normal:
+            itemId, itemNome = itemData
+            
+            instructions.append(Instruction(
+                itemId=itemId,
+                patrimonioItem=itemNome,
+                chamadoId=chamadoId,
+                tarefaId=tarefaId,
+                acaoItem=acaoItem,
+                localItem=localItem or "",
+                localFuzzyNome=fuzzyNome,
+                localFuzzyCodigo=fuzzyCodigo,
+                statusItem=statusAtivo or "",
+                tipoItem=tipoGlpi,
+            ))
+    
+    return instructions

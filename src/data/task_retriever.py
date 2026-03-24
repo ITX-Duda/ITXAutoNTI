@@ -11,16 +11,17 @@ from collections import defaultdict
 """
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 """
 def normalizarNumero(n):
     return str(int(n))  # remove zeros à esquerda
 
-def extrairCamposTask(html_texto: str) -> dict:
-    if not html_texto:
+def extrairCamposTask(htmlTexto: str) -> dict:
+    if not htmlTexto:
         return {}
     
-    html_texto = html.unescape(html_texto)
-    soup = BeautifulSoup(html_texto, "html.parser")
+    htmlTexto = html.unescape(htmlTexto)
+    soup = BeautifulSoup(htmlTexto, "html.parser")
 
     # Remove tabela (equipamentos são tratados em outra função)
     for tabela in soup.find_all("table"):
@@ -30,23 +31,23 @@ def extrairCamposTask(html_texto: str) -> dict:
     texto = soup.get_text("\n", strip=True)
 
     # Extrai campos
-    acao_match = re.search(r'ação\s*:\s*(.+)', texto, re.IGNORECASE)
-    local_match = re.search(r'localiza[çc][aã]o do ativo\s*:\s*(.+)', texto, re.IGNORECASE)
+    acaoMatch = re.search(r'ação\s*:\s*(.+)', texto, re.IGNORECASE)
+    localMatch = re.search(r'localiza[çc][aã]o do ativo\s*:\s*(.+)', texto, re.IGNORECASE)
 
-    acao = acao_match.group(1).strip() if acao_match else None
-    local = local_match.group(1).strip() if local_match else None
+    acao = acaoMatch.group(1).strip() if acaoMatch else None
+    local = localMatch.group(1).strip() if localMatch else None
 
     return {
         "acao": acao.lower() if acao else None,
         "localizacao": local.lower() if local else None
     }
 
-def extrairPatrimoniosPorTipo(html_texto: str) -> dict:
-    if not html_texto:
+def extrairPatrimoniosPorTipo(htmlTexto: str) -> dict:
+    if not htmlTexto:
         return {}
 
-    html_texto = html.unescape(html_texto)
-    soup = BeautifulSoup(html_texto, "html.parser")
+    htmlTexto = html.unescape(htmlTexto)
+    soup = BeautifulSoup(htmlTexto, "html.parser")
 
     resultado = defaultdict(list)
 
@@ -191,7 +192,7 @@ def getItxTasks(sessionToken: str, appToken: str, apiUrl: str) -> List[Dict]:
 
     widths = [12, 10, 14]
     totalWidth = 60
-    separator_width = sum(widths) + 6  # 12+10+14+6=42
+    separatorWidth = sum(widths) + 6  # 12+10+14+6=42
 
     # Header
     header = (
@@ -202,8 +203,8 @@ def getItxTasks(sessionToken: str, appToken: str, apiUrl: str) -> List[Dict]:
     print(header.center(totalWidth))
 
     # Separator
-    separator_str = "─" * separator_width
-    print(separator_str.center(totalWidth))
+    separatorStr = "─" * separatorWidth
+    print(separatorStr.center(totalWidth))
 
     # Dados
     for task in foundTasks:
@@ -215,12 +216,12 @@ def getItxTasks(sessionToken: str, appToken: str, apiUrl: str) -> List[Dict]:
         print(line.center(totalWidth))
 
     # Separator final
-    print(separator_str.center(totalWidth))
+    print(separatorStr.center(totalWidth))
 
     # Totais
     chamados = len(set(t['ticketId'] for t in foundTasks))
-    tasks = len(foundTasks)
-    print(f"📦 Chamados: {chamados} │ 🍧 Tasks: {tasks}".center(totalWidth))
+    taskCount = len(foundTasks)
+    print(f"📦 Chamados: {chamados} │ 🍧 Tasks: {taskCount}".center(totalWidth))
 
 
     return foundTasks

@@ -81,9 +81,9 @@ def getLocationIdByCode(apiUrl: str, headers: dict, codigo: str, nome: str) -> s
                 if resp.status_code == 200:
                     data = resp.json()
                     if data.get("data") and len(data["data"]) > 0:
-                        id_interno = str(data["data"][0].get("2"))
-                        if id_interno and id_interno != "None":
-                            return id_interno
+                        idInterno = str(data["data"][0].get("2"))
+                        if idInterno and idInterno != "None":
+                            return idInterno
             except Exception:
                 continue
                 
@@ -106,21 +106,21 @@ def getEstadoAtualItem(apiUrl: str, headers: Dict[str, str], itemType: str, item
 
 def gerarHistoricoCsv(results: List[Result], chamadoId: str, tarefaId: str) -> str:
     # 1. Cria a pasta 'relatorios' automaticamente na raiz do projeto
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-    reports_dir = os.path.join(project_root, "relatorios")
+    projectRoot = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    reportsDir = os.path.join(projectRoot, "relatorios")
     
     currentDir = os.getcwd()
     
     # 2. Cria o caminho exato para a pasta relatorios e cria ela se não existir
-    reports_dir = os.path.join(currentDir, "relatorios")
-    os.makedirs(reports_dir, exist_ok=True)
+    reportsDir = os.path.join(currentDir, "relatorios")
+    os.makedirs(reportsDir, exist_ok=True)
     
     # 3. Nome e Caminho completo
-    filename = f"historico_chamado_{chamadoId}_task_{tarefaId}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-    filepath = os.path.join(reports_dir, filename)
+    fileName = f"historico_chamado_{chamadoId}_task_{tarefaId}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    filePath = os.path.join(reportsDir, fileName)
 
-    with open(filepath, "w", newline="", encoding="utf-8") as csvfile:
-        writer = csv.writer(csvfile)
+    with open(filePath, "w", newline="", encoding="utf-8") as csvFileObj:
+        writer = csv.writer(csvFileObj)
 
         # Cabeçalho
         writer.writerow(
@@ -132,7 +132,7 @@ def gerarHistoricoCsv(results: List[Result], chamadoId: str, tarefaId: str) -> s
                 "Status Anterior",
                 "Status Atual",
                 "Localização Anterior",
-                "Localização Depoios",
+                "Localização Depois",
                 "Sucesso",
                 "Erro (se houver)",
             ]
@@ -171,11 +171,11 @@ def gerarHistoricoCsv(results: List[Result], chamadoId: str, tarefaId: str) -> s
                 ]
             )
 
-    print(f"📊 Histórico salvo: {filename}")
-    return filepath
+    print(f"📊 Histórico salvo: {fileName}")
+    return filePath
 
 
-def associar_item_ao_chamado(
+def associarItemAoChamado(
     apiUrl: str,
     headers: Dict[str, str],
     instruction: Instruction,
@@ -184,16 +184,16 @@ def associar_item_ao_chamado(
     Cria vínculo na tabela Item_Ticket.
     Equivalente a clicar em 'Adicionar um item' dentro do chamado.
     """
-    ticket_id = int(instruction.chamadoId)
+    ticketId = int(instruction.chamadoId)
     itemId = int(instruction.itemId)
-    itemtype = instruction.tipoItem
+    itemTypeStr = instruction.tipoItem
 
     url = f"{apiUrl.rstrip('/')}/Item_Ticket"
     payload = {
         "input": {
-            "tickets_id": ticket_id,
+            "tickets_id": ticketId,
             "items_id": itemId,
-            "itemtype": itemtype,
+            "itemtype": itemTypeStr,
         }
     }
 
@@ -202,7 +202,7 @@ def associar_item_ao_chamado(
     return f"Assoc:{resp.status_code}"
 
 
-def remover_item_do_chamado(
+def removerItemDoChamado(
     apiUrl: str,
     headers: Dict[str, str],
     instruction: Instruction,
@@ -211,12 +211,12 @@ def remover_item_do_chamado(
     Remove a associação item <-> ticket na tabela Item_Ticket,
     buscando pelos vínculos do próprio chamado.
     """
-    ticket_id = instruction.chamadoId
+    ticketId = instruction.chamadoId
     itemId = int(instruction.itemId)
-    itemtype = instruction.tipoItem
+    itemTypeStr = instruction.tipoItem
 
-    url_list = f"{apiUrl.rstrip('/')}/Ticket/{ticket_id}/Item_Ticket"
-    resp = requests.get(url_list, headers=headers, verify=False)
+    urlList = f"{apiUrl.rstrip('/')}/Ticket/{ticketId}/Item_Ticket"
+    resp = requests.get(urlList, headers=headers, verify=False)
     if resp.status_code not in (200, 206):
         return f"List ERRO {resp.status_code}: {resp.text}"
 
@@ -225,28 +225,28 @@ def remover_item_do_chamado(
     vinculos = [
         r
         for r in data
-        if int(r.get("items_id", 0)) == itemId and r.get("itemtype") == itemtype
+        if int(r.get("items_id", 0)) == itemId and r.get("itemtype") == itemTypeStr
     ]
 
     if not vinculos:
         return "Nenhum vínculo encontrado para remover"
 
     for v in vinculos:
-        vinc_id = v.get("id")
-        if not vinc_id:
+        vincId = v.get("id")
+        if not vincId:
             continue
-        url_del = f"{apiUrl.rstrip('/')}/Item_Ticket/{vinc_id}"
-        requests.delete(url_del, headers=headers, verify=False)
+        urlDel = f"{apiUrl.rstrip('/')}/Item_Ticket/{vincId}"
+        requests.delete(urlDel, headers=headers, verify=False)
 
     return f"Removidos {len(vinculos)} vínculos"
 
 
-def execute_from_parsed_task(
+def executeFromParsedTask(
     sessionToken: str,
     appToken: str,
     apiUrl: str,
     taskInstructions: List[Instruction],
-) -> List[Result]:
+) -> tuple[List[Result], Optional[str]]:
     """
     Recebe a lista de Instruction gerada pelo parser e executa
     as ações no GLPI para cada uma, gerando também o CSV de histórico.
@@ -265,7 +265,7 @@ def execute_from_parsed_task(
 
     for i, instruction in enumerate(taskInstructions, 1):
         print(f"  {i:2d}/{total} {instruction.patrimonioItem} ({instruction.tipoItem})...")
-        result = process_single_asset(apiUrl, headers, instruction)
+        result = processSingleAsset(apiUrl, headers, instruction)
         results.append(result)
 
         if result.success:
@@ -287,7 +287,7 @@ def execute_from_parsed_task(
     return results, None
 
 
-def process_single_asset(
+def processSingleAsset(
     apiUrl: str,
     headers: Dict[str, str],
     instruction: Instruction,
@@ -307,7 +307,7 @@ def process_single_asset(
         )
     
     patrimonio = instruction.patrimonioItem
-    ticket_id = instruction.chamadoId
+    ticketId = instruction.chamadoId
     tarefaId = instruction.tarefaId
     itemId = int(instruction.itemId)
     itemType = instruction.tipoItem
@@ -316,7 +316,7 @@ def process_single_asset(
     novaLocal = instruction.localItem or ""                 # "Devel" vindo da task
 
     # Lê STATUS e LOCALIZAÇÃO ANTES da alteração
-    statusAntes, localAntes = getStatusELocalItem(apiUrl, headers, itemType, itemId)
+    statusAntes, localAntes = getStatusELocalItem(apiUrl, headers, itemType, str(itemId))
 
     # Mapeia texto → ID numérico do GLPI
     mapStatus = {
@@ -336,17 +336,17 @@ def process_single_asset(
     realStatus = mapStatus.get(textoStatus)
 
     fields: Dict[str, Any] = {}
-    fields["id"] = int(itemId) # IMPORTANTE: O GLPI exige o ID do item dentro do payload no PUT
+    fields["id"] = itemId # IMPORTANTE: O GLPI exige o ID do item dentro do payload no PUT
 
     if realStatus is not None:
         # ajuste para o nome do campo de status numérico no seu GLPI
-        fields["statusId"] = realStatus
+        fields["states_id"] = realStatus
 
     # --- INÍCIO DA MÁGICA DA LOCALIZAÇÃO ---
     if getattr(instruction, "localFuzzyCodigo", None):
-        loc_id = getLocationIdByCode(apiUrl, headers, instruction.localFuzzyCodigo, instruction.localFuzzyNome)
-        if loc_id:
-            fields["locations_id"] = int(loc_id)
+        locId = getLocationIdByCode(apiUrl, headers, instruction.localFuzzyCodigo, instruction.localFuzzyNome)
+        if locId:
+            fields["locations_id"] = int(locId)
         else:
             print(f"⚠️ Aviso: ID numérico não encontrado no GLPI para o código {instruction.localFuzzyCodigo}")
     # --- FIM DA MÁGICA ---
@@ -368,14 +368,14 @@ def process_single_asset(
 
         # Associa / remove item do chamado
         if action == "inserir":
-            msgAssoc = associar_item_ao_chamado(apiUrl, headers, instruction)
+            msgAssoc = associarItemAoChamado(apiUrl, headers, instruction)
         elif action == "remover":
-            msgAssoc = remover_item_do_chamado(apiUrl, headers, instruction)
+            msgAssoc = removerItemDoChamado(apiUrl, headers, instruction)
         else:
             msgAssoc = f"Ação desconhecida: {instruction.acaoItem}"
 
         # Lê STATUS depois (local depois vamos considerar o da task)
-        statusDepois, _ = getStatusELocalItem(apiUrl, headers, itemType, itemId)
+        statusDepois, _ = getStatusELocalItem(apiUrl, headers, itemType, str(itemId))
         localDepois = novaLocal or localAntes
 
         # String estruturada para o CSV
@@ -392,7 +392,7 @@ def process_single_asset(
             success=True,
             patrimonio=patrimonio,
             itemId=str(itemId),
-            chamadoId=ticket_id,
+            chamadoId=ticketId,
             tarefaId=tarefaId,
             tipoItem=itemType,
             lancStatusamento=lancStatus,
@@ -412,7 +412,7 @@ def process_single_asset(
             success=False,
             patrimonio=patrimonio,
             itemId=str(itemId),
-            chamadoId=ticket_id,
+            chamadoId=ticketId,
             tarefaId=tarefaId,
             tipoItem=itemType,
             lancStatusamento=lancStatus,

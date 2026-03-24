@@ -192,10 +192,10 @@ def closeTask(
         
         # MENSAGENS PERSONALIZADAS
         if isSuccess:
-            linhasItens.append(f"✅ {pat} foi {acaoPassado}, status atual: {status} e localização: {localizacao}")
+            linhasItens.append(f"✅ {pat} foi {acaoPassado}, 📊 Status atual: {status} e 📍 Localização: {localizacao}")
         else:
             msgErro = erro if erro else "Erro desconhecido"
-            linhasItens.append(f"❌ {pat} não foi {acaoPassado}. Motivo: {msgErro}")
+            linhasItens.append(f"❌ {pat} não foi {acaoPassado}.{msgErro}")
 
     # Junta os itens usando apenas a tag HTML <br>
     textoItens = "<br>".join(linhasItens)

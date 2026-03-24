@@ -1,72 +1,82 @@
+# src/logic/task_closer.py
+
 import os
 import json
 import httpx
 from typing import Dict, Any, Optional, List
 
 class GlpiSender:
-    def __init__(self, api_url: str, app_token: str, session_token: str):
-        self.api_url = api_url.rstrip("/")
-        self.headers_json = {
-            "App-Token": app_token,
-            "Session-Token": session_token,
+    def __init__(self, apiUrl: str, appToken: str, sessionToken: str):
+        self.apiUrl = apiUrl.rstrip("/")
+        self.headersJson = {
+            "App-Token": appToken,
+            "Session-Token": sessionToken,
             "Content-Type": "application/json",
         }
-        self.headers_multipart = {
-            "App-Token": app_token,
-            "Session-Token": session_token,
+        self.headersMultipart = {
+            "App-Token": appToken,
+            "Session-Token": sessionToken,
         }
         
         self.client = httpx.Client(
-            base_url=self.api_url,
-            headers=self.headers_json,
+            base_url=self.apiUrl,
+            headers=self.headersJson,
             verify=False,
         )
 
-    def mencionaUsuario(self, task_id: int) -> str:
+    def getTaskAuthorMention(self, taskId: int) -> str:
+        """Busca o usuário que criou a task para fazer a menção com NOME COMPLETO."""
         try:
-            resp_task = self.client.get(f"/TicketTask/{task_id}")
-            resp_task.raise_for_status()
-            users_id = resp_task.json().get("users_id")
+            # 1. Acha o ID do autor da task
+            respTask = self.client.get(f"/TicketTask/{taskId}")
+            respTask.raise_for_status()
+            usersId = respTask.json().get("users_id")
             
-            if not users_id:
+            if not usersId:
                 return ""
                 
-            resp_user = self.client.get(f"/User/{users_id}")
-            resp_user.raise_for_status()
-            user_data = resp_user.json()
-            primeiro_nome = user_data.get("firstname") or ""
-            sobrenome = user_data.get("realname") or ""
-            nome_completo = f"{primeiro_nome} {sobrenome}".strip()
+            # 2. Pega os dados do usuário no GLPI
+            respUser = self.client.get(f"/User/{usersId}")
+            respUser.raise_for_status()
+            userData = respUser.json()
             
-            if not nome_completo:
-                nome_completo = user_data.get("name") or "Usuário"
+            # --- MÁGICA DO NOME COMPLETO ---
+            primeiroNome = userData.get("firstname") or ""
+            sobrenome = userData.get("realname") or ""
+            
+            # Junta os dois (Ex: "Paula Costa")
+            nomeCompleto = f"{primeiroNome} {sobrenome}".strip()
+            
+            # Backup: se o usuário não tiver nome preenchido, usa o login ('name')
+            if not nomeCompleto:
+                nomeCompleto = userData.get("name") or "Usuário"
                 
-            #Mencionar o usário
-            return f'<a class="user-mention" href="/front/user.form.php?id={users_id}">@{nome_completo}</a>'
+            # 3. Retorna a tag com o nome bonito!
+            return f'<a class="user-mention" data-users-id="{usersId}">@{nomeCompleto}</a>'
             
         except Exception as e:
-            print(f"⚠️ Não foi possível buscar o criador da task {task_id}: {e}")
+            print(f"⚠️ Não foi possível buscar o criador da task {taskId}: {e}")
             return ""
 
-    def fechaTarefa(self, task_id: int) -> Dict[str, Any]:
+    def markTaskDone(self, taskId: int) -> Dict[str, Any]:
         """Fecha task original (state=2)."""
         try:
             response = self.client.put(
-                f"/TicketTask/{task_id}",
+                f"/TicketTask/{taskId}",
                 json={"input": {"state": 2}},
             )
             response.raise_for_status()
-            print(f"✅ Task {task_id} fechada (Feita)")
+            print(f"✅ Task {taskId} fechada (Feita)")
             return {"success": True}
         except Exception as e:
-            print(f"❌ Erro ao fechar task {task_id}: {e}")
+            print(f"❌ Erro ao fechar task {taskId}: {e}")
             return {"success": False, "error": str(e)}
 
-    def respostaITX(self, ticket_id: int, message: str) -> Dict[str, Any]:
+    def createInfoTask(self, ticketId: int, message: str) -> Dict[str, Any]:
         """Cria nova task de informação (state=0)."""
         try:
             payload = {
-                "tickets_id": ticket_id,
+                "tickets_id": ticketId,
                 "content": message,
                 "state": 0,
                 "is_html": 1  # Informação
@@ -76,87 +86,102 @@ class GlpiSender:
                 json={"input": payload},
             )
             response.raise_for_status()
-            new_task_id = response.json().get("id")
-            print(f"✅ Nova task de informação criada (ID: {new_task_id})")
-            return {"success": True, "new_task_id": new_task_id}
+            newTaskId = response.json().get("id")
+            print(f"✅ Nova task de informação criada (ID: {newTaskId})")
+            return {"success": True, "newTaskId": newTaskId}
         except Exception as e:
             print(f"❌ Erro ao criar task de informação: {e}")
             return {"success": False, "error": str(e)}
 
-    def insereLog(self, itemtype: str, items_id: int, file_path: str) -> Dict[str, Any]:
+    def uploadDocument(self, itemType: str, itemsId: int, filePath: str) -> Dict[str, Any]:
         """Anexa o arquivo CSV no GLPI vinculado a um item específico (Ticket ou TicketTask)."""
-        if not file_path or not os.path.exists(file_path):
+        if not filePath or not os.path.exists(filePath):
             return {"success": False, "error": "Arquivo CSV não encontrado."}
 
-        filename = os.path.basename(file_path)
+        fileName = os.path.basename(filePath)
 
         manifest = {
             "input": {
-                "name": f"Histórico de Execução - {filename}",
-                "_filename": [filename],
-                "itemtype": itemtype,
-                "items_id": items_id
+                "name": f"Histórico de Execução - {fileName}",
+                "_filename": [fileName],
+                "itemtype": itemType,
+                "items_id": itemsId
             }
         }
 
         try:
-            with open(file_path, "rb") as f:
+            with open(filePath, "rb") as f:
                 files = {
                     'uploadManifest': (None, json.dumps(manifest), 'application/json'),
-                    'filename[0]': (filename, f, 'text/csv')
+                    'filename[0]': (fileName, f, 'text/csv')
                 }
                 
                 response = httpx.post(
-                    f"{self.api_url}/Document",
-                    headers=self.headers_multipart,
+                    f"{self.apiUrl}/Document",
+                    headers=self.headersMultipart,
                     files=files,
                     verify=False
                 )
                 response.raise_for_status()
                 
-                doc_id = response.json().get("id", "unknown")
-                print(f"📎 Anexo enviado com sucesso! (Doc ID: {doc_id})")
-                return {"success": True, "doc_id": doc_id}
+                docId = response.json().get("id", "unknown")
+                print(f"📎 Anexo enviado com sucesso! (Doc ID: {docId})")
+                return {"success": True, "docId": docId}
         except Exception as e:
             print(f"❌ Erro ao enviar anexo: {e}")
             return {"success": False, "error": str(e)}
 
 
-def encerraFluxo(api_url: str, app_token: str, session_token: str, task_id: str, ticket_id: str, resultados: List[Any],
-    csv_file: Optional[str] = None
+def closeTask(
+    apiUrl: str,
+    appToken: str,
+    sessionToken: str,
+    taskId: str,
+    ticketId: str,
+    resultados: List[Any],
+    csvFile: Optional[str] = None
 ) -> Dict[str, Any]:
-    if not task_id.isdigit() or not ticket_id.isdigit():
-        return {"success": False, "reason": "task_id ou ticket_id inválido"}
+    """
+    Fluxo completo de fechamento de tarefa e envio de evidências.
+    """
+    if not taskId.isdigit() or not ticketId.isdigit():
+        return {"success": False, "reason": "taskId ou ticketId inválido"}
 
-    sender = GlpiSender(api_url, app_token, session_token)
+    sender = GlpiSender(apiUrl, appToken, sessionToken)
 
-    mention = sender.mencionaUsuario(int(task_id))
+    # 1) Descobre quem abriu a task antes de fechar ela
+    mention = sender.getTaskAuthorMention(int(taskId))
 
-    task_done = sender.fechaTarefa(int(task_id))
-    if not task_done["success"]:
-        return task_done
+    # 2) Fecha task original
+    taskDone = sender.markTaskDone(int(taskId))
+    if not taskDone["success"]:
+        return taskDone
 
+    # 3) Monta o relatório detalhado
     sucessos = 0
     total = len(resultados)
-    linhas_itens = []
+    linhasItens = []
     
     for r in resultados:
-        is_success = getattr(r, "success", False) or (isinstance(r, dict) and r.get("success", False))
+        # Pega as variáveis principais
+        isSuccess = getattr(r, "success", False) or (isinstance(r, dict) and r.get("success", False))
         pat = getattr(r, "patrimonio", "") or (isinstance(r, dict) and r.get("patrimonio", ""))
         acao = (getattr(r, "action", "") or (isinstance(r, dict) and r.get("action", ""))).lower()
         erro = getattr(r, "erro", "") or (isinstance(r, dict) and r.get("erro", ""))
         lanc = getattr(r, "lancStatusamento", "") or (isinstance(r, dict) and r.get("lancStatusamento", ""))
         
-        if is_success:
+        if isSuccess:
             sucessos += 1
             
+        # Define se foi inserido ou removido
         if acao == "remover":
-            acao_passado = "removido"
+            acaoPassado = "removido"
         elif acao == "inserir":
-            acao_passado = "inserido"
+            acaoPassado = "inserido"
         else:
-            acao_passado = acao
+            acaoPassado = acao
             
+        # Extrai o Status e a Localização da string
         status = "?"
         localizacao = "?"
         for parte in lanc.split("|"):
@@ -165,45 +190,50 @@ def encerraFluxo(api_url: str, app_token: str, session_token: str, task_id: str,
             elif parte.startswith("LOCAL_DEPOIS:"):
                 localizacao = parte.split(":", 1)[1]
         
-        if is_success:
-            linhas_itens.append(f"✅ {pat} foi {acao_passado}, status atual: {status} e localização: {localizacao}")
+        # MENSAGENS PERSONALIZADAS
+        if isSuccess:
+            linhasItens.append(f"✅ {pat} foi {acaoPassado}, 📊 Status atual: {status} e 📍 Localização: {localizacao}")
         else:
-            msg_erro = erro if erro else "Erro desconhecido"
-            linhas_itens.append(f"❌ {pat} não foi {acao_passado}")
+            msgErro = erro if erro else "Erro desconhecido"
+            linhasItens.append(f"❌ {pat} não foi {acaoPassado}.{msgErro}")
 
-    texto_itens = "<br>".join(linhas_itens)
+    # Junta os itens usando apenas a tag HTML <br>
+    textoItens = "<br>".join(linhasItens)
+
+    # Mensagem final formatada 100% em HTML para o GLPI pular as linhas corretamente
     message = (
         f"{mention},<br><br>"
-        f"🤝 Ohh zé, bão?<br><br>"
-        f"Executada e fechada com sucesso tarefa: #{task_id}<br><br>"
+        f"🤝 E ai meu chapa?<br><br>"
+        f"Executada e fechada com sucesso tarefa: #{taskId}<br><br>"
         f"{sucessos}/{total} Itens tratados:<br><br>"
-        f"{texto_itens}"
+        f"{textoItens}"
     )
 
-    info_task = sender.respostaITX(int(ticket_id), message)
-    new_task_id = info_task.get("new_task_id")
+    # 5) Nova task de informação
+    infoTask = sender.createInfoTask(int(ticketId), message)
+    newTaskId = infoTask.get("newTaskId")
 
-  
-    doc_upload = {"success": False}
+    # 6) Upload do CSV
+    docUpload = {"success": False}
     
-
-    if csv_file and new_task_id:
-        print(f"🔎 Preparando para anexar CSV dentro da Tarefa {new_task_id}...")
+    # Agora exigimos que a nova task tenha sido criada para anexar nela
+    if csvFile and newTaskId:
+        print(f"🔎 Preparando para anexar CSV dentro da Tarefa {newTaskId}...")
         
-        doc_upload = sender.insereLog(
-            itemtype="TicketTask", 
-            items_id=int(new_task_id), 
-            file_path=csv_file
+        docUpload = sender.uploadDocument(
+            itemType="TicketTask", 
+            itemsId=int(newTaskId), 
+            filePath=csvFile
         )
         
-        if doc_upload.get("success"):
+        if docUpload.get("success"):
             print("✅ CSV anexado com sucesso dentro da tarefa de informação!")
         else:
-            print(f"❌ Falha no anexo: {doc_upload.get('error')}")
+            print(f"❌ Falha no anexo: {docUpload.get('error')}")
 
     return {
-        "success": info_task.get("success", False),
-        "task_done": task_done,
-        "info_task": info_task,
-        "document_uploaded": doc_upload
+        "success": infoTask.get("success", False),
+        "taskDone": taskDone,
+        "infoTask": infoTask,
+        "documentUploaded": docUpload
     }

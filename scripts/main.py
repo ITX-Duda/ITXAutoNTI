@@ -9,9 +9,9 @@ from src.utils.config_loader import chaves
 from src.auth.session import autenticarGlpi
 from src.data.reader import userName
 from src.logic.task_parser import parseTaskInstruction, Instruction
-from src.data.task_retriever import pegaTarefas
-from src.logic.task_executor import execucaoPosParser
-from src.logic.task_closer import encerraFluxo
+from src.data.task_retriever import getItxTasks
+from src.logic.task_executor import executeFromParsedTask
+from src.logic.task_closer import closeTask
 
 def main():
     print("\n\n" + "-" * 60)
@@ -29,7 +29,7 @@ def main():
 
     print(f"✅ Configurações OK.")
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------
-#Autenticação
+# Autenticação
     print("\n🔐 2. Autenticando no GLPI...")
     sessionToken = autenticarGlpi(apiUrl, appToken, userToken)
 
@@ -43,7 +43,7 @@ def main():
     print("-" * 60)
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------
-#Tasks 
+# Tasks 
     print("\n\n\n" + "-" * 60)
     print("👾⋆˚===== Task Retriever + Task Parser + Task Action =====˖°👾")
     print("-" * 60)
@@ -55,14 +55,14 @@ def main():
         ticketId = str(task.get("ticketId") or "")
         taskId = str(task.get("taskId") or "")
 
-        taskinstructions = parseTaskInstruction(task, sessionToken, appToken, apiUrl)
+        taskInstructions = parseTaskInstruction(task, sessionToken, appToken, apiUrl)
 
-        for i, instr in enumerate(taskinstructions, 1):
+        for i, instr in enumerate(taskInstructions, 1):
             print(f"  {i}. {instr}")
 
-        if taskinstructions:
-            # CORREÇÃO AQUI: Desempacotar a tupla (resultados, arquivo_csv)
-            resultados, csv_file = execute_from_parsed_task(sessionToken, appToken, apiUrl, taskinstructions)
+        if taskInstructions:
+            # Desempacotar a tupla (resultados, csvFile)
+            resultados, csvFile = executeFromParsedTask(sessionToken, appToken, apiUrl, taskInstructions)
 
             sucessos = 0
             total = len(resultados)
@@ -74,18 +74,19 @@ def main():
 
             print(f"✅ {sucessos}/{total} executados com sucesso")
 
-            # Closer AGORA PASSANDO A LISTA DE RESULTADOS
-            close_resp = close_task(
-                api_url=apiUrl,
-                app_token=appToken,
-                session_token=sessionToken,
-                task_id=taskId,
-                ticket_id=ticketId,
-                resultados=resultados,  # <--- Passando a lista em vez de só os números
-                csv_file=csv_file
+            # Closer passando a lista de resultados e usando os parâmetros em camelCase
+            closeResp = closeTask(
+                apiUrl=apiUrl,
+                appToken=appToken,
+                sessionToken=sessionToken,
+                taskId=taskId,
+                ticketId=ticketId,
+                resultados=resultados,
+                csvFile=csvFile
             )
 
-            print("📎 Closer:", close_resp.get("success"))
+            print("📎 Closer:", closeResp.get("success"))
+            
     print("\n" + "-" * 60)
     print("👾⋆˚===== Task Retriever + Task Parser - CONCLUÍDO =====˖°👾")
     print("-" * 60)

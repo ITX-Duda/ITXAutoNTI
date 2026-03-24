@@ -6,18 +6,81 @@ from bs4 import BeautifulSoup
 from typing import List, Dict
 from collections import defaultdict
 
+"""
+
+"""
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-def pegaTarefas(sessionToken: str, appToken: str, apiUrl: str) -> List[Dict]:
+"""
+def normalizarNumero(n):
+    return str(int(n))  # remove zeros à esquerda
+
+def extrairCamposTask(htmlTexto: str) -> dict:
+    if not htmlTexto:
+        return {}
+    
+    htmlTexto = html.unescape(htmlTexto)
+    soup = BeautifulSoup(htmlTexto, "html.parser")
+
+    # Remove tabela (equipamentos são tratados em outra função)
+    for tabela in soup.find_all("table"):
+        tabela.decompose()
+
+    # Texto limpo
+    texto = soup.get_text("\n", strip=True)
+
+    # Extrai campos
+    acaoMatch = re.search(r'ação\s*:\s*(.+)', texto, re.IGNORECASE)
+    localMatch = re.search(r'localiza[çc][aã]o do ativo\s*:\s*(.+)', texto, re.IGNORECASE)
+
+    acao = acaoMatch.group(1).strip() if acaoMatch else None
+    local = localMatch.group(1).strip() if localMatch else None
+
+    return {
+        "acao": acao.lower() if acao else None,
+        "localizacao": local.lower() if local else None
+    }
+
+def extrairPatrimoniosPorTipo(htmlTexto: str) -> dict:
+    if not htmlTexto:
+        return {}
+
+    htmlTexto = html.unescape(htmlTexto)
+    soup = BeautifulSoup(htmlTexto, "html.parser")
+
+    resultado = defaultdict(list)
+
+    for row in soup.find_all("tr")[1:]:  # pula cabeçalho
+        cols = row.find_all("td")
+        if len(cols) < 2:
+            continue
+
+        tipo = cols[0].get_text(strip=True).lower()
+        celula = cols[1].get_text(" ", strip=True)
+
+        numeros = re.findall(r'\d+', celula)
+
+        for n in numeros:
+            resultado[tipo].append(normalizarNumero(n))
+
+    # remove duplicados e ordena
+    for tipo in resultado:
+        resultado[tipo] = sorted(set(resultado[tipo]), key=int)
+
+    return dict(resultado)
+"""
+
+def getItxTasks(sessionToken: str, appToken: str, apiUrl: str) -> List[Dict]:
     headers = {
         "Content-Type": "application/json",
         "Session-Token": sessionToken,
         "App-Token": appToken
     }
 
-# =========================================================================
+# ===========================================================================
 # BUSCA DOS CHAMADOS
-# =============================================================================
+# ===========================================================================
     urlPesquisa = f"{apiUrl.rstrip('/')}/search/Ticket"
     parametrosPesquisa = {
         # Chamados da CGP:
@@ -129,8 +192,9 @@ def pegaTarefas(sessionToken: str, appToken: str, apiUrl: str) -> List[Dict]:
 
     widths = [12, 10, 14]
     totalWidth = 60
-    separator_width = sum(widths) + 6  # 12+10+14+6=42
+    separatorWidth = sum(widths) + 6  # 12+10+14+6=42
 
+    # Header
     header = (
         f"{'🧩 Task':^{widths[0]}}│"
         f"{'🎫 Chamado':^{widths[1]}}│"
@@ -138,8 +202,11 @@ def pegaTarefas(sessionToken: str, appToken: str, apiUrl: str) -> List[Dict]:
     )
     print(header.center(totalWidth))
 
-    separator_str = "─" * separator_width
-    print(separator_str.center(totalWidth))
+    # Separator
+    separatorStr = "─" * separatorWidth
+    print(separatorStr.center(totalWidth))
+
+    # Dados
     for task in foundTasks:
         line = (
             f"{str(task['taskId']):>10}│"
@@ -148,11 +215,13 @@ def pegaTarefas(sessionToken: str, appToken: str, apiUrl: str) -> List[Dict]:
         )
         print(line.center(totalWidth))
 
-    print(separator_str.center(totalWidth))
+    # Separator final
+    print(separatorStr.center(totalWidth))
 
+    # Totais
     chamados = len(set(t['ticketId'] for t in foundTasks))
-    tasks = len(foundTasks)
-    print(f"📦 Chamados: {chamados} │ 🍧 Tasks: {tasks}".center(totalWidth))
+    taskCount = len(foundTasks)
+    print(f"📦 Chamados: {chamados} │ 🍧 Tasks: {taskCount}".center(totalWidth))
 
 
     return foundTasks

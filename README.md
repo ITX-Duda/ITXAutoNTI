@@ -110,7 +110,7 @@ Este projeto não seria o mesmo sem o esforço conjunto dessa equipe. Um salve p
       <a href="https://github.com/PedrolaLima">
         <img src="https://github.com/PedrolaLima.png" width="90px" style="border-radius: 50%;" alt="PedrolaLima"/><br>
         <sub><b>PedrolaLima</b></sub><br>
-        <sub><i>Action Executor</i></sub>
+        <sub><i>Task Executor</i></sub>
       </a>
     </td>
     <td align="center" valign="top">

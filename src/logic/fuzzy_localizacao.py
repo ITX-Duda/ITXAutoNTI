@@ -2,6 +2,8 @@ import pandas as pd
 import os
 from fuzzywuzzy import fuzz, process
 
+SCORE_CUTOFF = 85
+
 def getLocalizacaoFuzzy(LocalizacaoInput):
     if not LocalizacaoInput: 
         return None
@@ -13,14 +15,13 @@ def getLocalizacaoFuzzy(LocalizacaoInput):
     tabelaLocalizacao = pd.read_csv(csvPath, sep=';', usecols=['Nome', 'Código'], dtype=str).dropna()
     df = pd.DataFrame(tabelaLocalizacao)
 
-    # === SUA LÓGICA ORIGINAL ===
-    matchFuzzy = process.extract(str(LocalizacaoInput), df["Nome"].tolist(), limit=10)
-    matches = [m[0] for m in matchFuzzy]
-    matchSub = process.extractOne(str(LocalizacaoInput), matches, scorer=fuzz.partial_ratio)
-    # ===========================
+    
+    # === token_set_ratio: ignora a ordem das palavras e palavras duplicadas ===
+    matchFuzzy = process.extractOne(str(LocalizacaoInput), df["Nome"].tolist(), scorer=fuzz.token_set_ratio, score_cutoff=SCORE_CUTOFF)
+    # ==========================================================================
 
-    if matchSub:
-        nome_encontrado = matchSub[0]
+    if matchFuzzy:
+        nome_encontrado = matchFuzzy[0]
         # Pega a linha da planilha correspondente ao nome que sua lógica achou
         linha = df[df['Nome'] == nome_encontrado].iloc[0]
         
@@ -29,4 +30,8 @@ def getLocalizacaoFuzzy(LocalizacaoInput):
             "Codigo": str(linha['Código'])
         }
         
-    return None
+        # Caso não exista match com score igual ou acima do estabelecido, retorna a localização padrão UFABC
+    return {
+        "Nome": "FUNDAÇÃO UNIVERSIDADE FEDERAL DO ABC",
+        "Codigo": "UFABC" 
+    }

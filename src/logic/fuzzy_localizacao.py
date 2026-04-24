@@ -23,7 +23,7 @@ def getLocalizacaoFuzzy(LocalizacaoInput):
     currentDir = os.path.dirname(os.path.abspath(__file__))
     csvPath = os.path.join(currentDir, "localizacao.csv")
     
-    tabelaLocalizacao = pd.read_csv(csvPath, sep=';', usecols=['Nome', 'Código'], dtype=str).dropna()
+    tabelaLocalizacao = pd.read_csv(csvPath, sep=';', useCols=['Nome', 'Código'], dtype=str).dropna()
     df = pd.DataFrame(tabelaLocalizacao)
 
     matchFuzzy = process.extractOne(

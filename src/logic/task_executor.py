@@ -150,7 +150,7 @@ def gerarHistoricoCsv(results: List[Result], chamadoId: str, tarefaId: str) -> s
     fileName = f"historico_chamado_{chamadoId}_task_{tarefaId}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
     filePath = os.path.join(reportsDir, fileName)
 
-    with open(filePath, "w", newline="", encoding="utf-8") as csvFileObj:
+    with open(filePath, "w", newLine="", encoding="utf-8") as csvFileObj:
         writer = csv.writer(csvFileObj)
 
         writer.writerow(

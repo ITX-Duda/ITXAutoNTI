@@ -6,90 +6,101 @@ projectRoot = os.path.abspath(os.path.join(currentDir, ".."))
 sys.path.insert(0, projectRoot)
 
 from src.utils.config_loader import chaves
-from src.auth.session import autenticarGlpi
-from src.data.reader import userName
+from src.utils.logger import logger
+from src.client.api_client import ApiClient
 from src.logic.task_parser import parseTaskInstruction, Instruction
 from src.data.task_retriever import getItxTasks
 from src.logic.task_executor import executeFromParsedTask
 from src.logic.task_closer import closeTask
 
 def main():
-    print("\n\n" + "-" * 60)
-    print("🚀 ====== ITXConexão =====")
-    print("-" * 60)
+    """
+    O que faz?
+    Coordena do zero todo o ciclo de vida do software: 
+        1) Login e Validação de Credenciais;
+        2) Escaneamento de Demandas;
+        3) Tradução Algorítmica;
+        4) Operações de Banco de Dados;
+        5) Encerramento e Auditoria.
 
-    print("\n🔍 1. Carregando configurações...")
+    O que retorna? 
+    - 0 para sucesso de execução
+    - 1 para falha de execução
+    """
+    logger.info(". ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁. ")
+    logger.info("Uai sô... iniciando os trem aqui 🤝")
+    logger.info("ITXAutoNTI v1.0.0 - 18/04/2026")
+    logger.info("Se ajeita aí que lá vem log da operação:")
+    logger.info(". ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁. ")
+    logger.info("======= ITXAutoNTI Conectando ao GLPI =======")
+    
+    if not chaves:
+        logger.error("🛑 Erro crítico nas variáveis de ambiente (.env). Sistema interrompido.")
+        return 1
+
     apiUrl = chaves.get("GLPI_API_URL")
     appToken = chaves.get("GLPI_APP_TOKEN")
     userToken = chaves.get("GLPI_USER_TOKEN")
 
+    logger.info("⏳ Carregando configurações...")
     if not all([apiUrl, appToken, userToken]):
-        print("❌ Erro: Configurações da API não encontradas no .env. Abortando.")
-        return 
-
-    print(f"✅ Configurações OK.")
-#------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# Autenticação
-    print("\n🔐 2. Autenticando no GLPI...")
-    sessionToken = autenticarGlpi(apiUrl, appToken, userToken)
-
-    if sessionToken:
-        userNome = userName(apiUrl, appToken, userToken, sessionToken)
-    else:
-        print("❌ Erro: Autenticação falhou! Verifique tokens no .env")
+        logger.error("🛑 Credenciais insuficientes no config_loader. Abortando.")
         return 1
-    print("\n" + "-" * 60)
-    print("🎉 === ITXConexão - CONCLUIDO ===")
-    print("-" * 60)
+    logger.info("✅ Configurações OK.")
 
-#------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# Tasks 
-    print("\n\n\n" + "-" * 60)
-    print("👾⋆˚===== Task Retriever + Task Parser + Task Action =====˖°👾")
-    print("-" * 60)
-    print("Pesquisa dos chamados e das tasks que citam o ITXAutoNTI.\n")
+    logger.info("⌛ Autenticando no GLPI...")
+    apiClient = ApiClient(apiUrl, appToken, userToken)
+    
+    if not apiClient.initSession():
+        logger.error("🛑 Falha no initSession (Autenticação não concluída).")
+        return 1
 
-    tasks = getItxTasks(sessionToken, appToken, apiUrl)
+    logger.info(". ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁. ")
+    logger.info("======= Buscando Tarefas =======")
+    logger.info("Pesquisa dos chamados e das tasks que citam o ITXAutoNTI.")
+    
+    tasksEncontradas = getItxTasks(apiClient)
 
-    for task in tasks:
-        ticketId = str(task.get("ticketId") or "")
-        taskId = str(task.get("taskId") or "")
+    if not tasksEncontradas:
+        logger.info("Nenhuma task nova.")
+        apiClient.killSession()
+        return 0
 
-        taskInstructions = parseTaskInstruction(task, sessionToken, appToken, apiUrl)
+    logger.info(". ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁. ")
+    logger.info("======= Executando Tarefas =======")
 
-        for i, instr in enumerate(taskInstructions, 1):
-            print(f"  {i}. {instr}")
+    for idx, t in enumerate(tasksEncontradas, 1):
+        ticketId = t.get("ticketId")
+        taskId = t.get("taskId")
+        
+        logger.info(f"Chamado: #{ticketId} e Task: #{taskId} -> Em processamento.")
 
-        if taskInstructions:
-            # Desempacotar a tupla (resultados, csvFile)
-            resultados, csvFile = executeFromParsedTask(sessionToken, appToken, apiUrl, taskInstructions)
+        instructions = parseTaskInstruction(t, apiClient)
 
-            sucessos = 0
-            total = len(resultados)
-            for r in resultados:
-                if isinstance(r, dict) and r.get("success") is True:
-                    sucessos += 1
-                elif hasattr(r, "success") and r.success:
-                    sucessos += 1
+        if not instructions:
+            logger.warning(f"Task #{taskId} do chamado #{ticketId} falhou no parse ou retornou vazio.")
+            continue
 
-            print(f"✅ {sucessos}/{total} executados com sucesso")
+        results, csvFile = executeFromParsedTask(apiClient, instructions)
 
-            # Closer passando a lista de resultados e usando os parâmetros em camelCase
-            closeResp = closeTask(
-                apiUrl=apiUrl,
-                appToken=appToken,
-                sessionToken=sessionToken,
-                taskId=taskId,
-                ticketId=ticketId,
-                resultados=resultados,
-                csvFile=csvFile
-            )
+        resClose = closeTask(
+            apiClient=apiClient,
+            taskId=str(taskId),
+            ticketId=str(ticketId),
+            resultados=results,
+            csvFile=csvFile
+        )
 
-            print("📎 Closer:", closeResp.get("success"))
-            
-    print("\n" + "-" * 60)
-    print("👾⋆˚===== Task Retriever + Task Parser - CONCLUÍDO =====˖°👾")
-    print("-" * 60)
+        if resClose.get("success"):
+            logger.info("🥳 Task fechada.")
+        else:
+            logger.error(f"Erro ao fechar ou subir anexo: {resClose}")
+
+    logger.info(". ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁. ")
+    logger.info("✅ Tudo Finalizado.")
+    
+    apiClient.killSession()
+    return 0
 
 if __name__ == "__main__":
     exit(main())

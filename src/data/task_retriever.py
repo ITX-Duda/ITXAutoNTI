@@ -1,130 +1,60 @@
-import requests
-import urllib3
 import re
-import html
 from bs4 import BeautifulSoup
 from typing import List, Dict
 from collections import defaultdict
 
-"""
+from src.utils.logger import logger
 
-"""
+def getItxTasks(apiClient) -> List[Dict]:
+    """
+    O que faz?
+    Atua como um radar varrendo ativamente o banco de dados do GLPI via API para buscar tarefas alocadas à automação.
 
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    Argumentos Necessários:
+    - apiClient (ApiClient): A instância do cliente HTTP da rede.
 
-"""
-def normalizarNumero(n):
-    return str(int(n))  # remove zeros à esquerda
-
-def extrairCamposTask(htmlTexto: str) -> dict:
-    if not htmlTexto:
-        return {}
+    O que retorna? 
+    - Lista de dicionários contendo os dados brutos de todas as tarefas encontradas
+    """
+    urlPesquisa = "/search/Ticket"
     
-    htmlTexto = html.unescape(htmlTexto)
-    soup = BeautifulSoup(htmlTexto, "html.parser")
-
-    # Remove tabela (equipamentos são tratados em outra função)
-    for tabela in soup.find_all("table"):
-        tabela.decompose()
-
-    # Texto limpo
-    texto = soup.get_text("\n", strip=True)
-
-    # Extrai campos
-    acaoMatch = re.search(r'ação\s*:\s*(.+)', texto, re.IGNORECASE)
-    localMatch = re.search(r'localiza[çc][aã]o do ativo\s*:\s*(.+)', texto, re.IGNORECASE)
-
-    acao = acaoMatch.group(1).strip() if acaoMatch else None
-    local = localMatch.group(1).strip() if localMatch else None
-
-    return {
-        "acao": acao.lower() if acao else None,
-        "localizacao": local.lower() if local else None
-    }
-
-def extrairPatrimoniosPorTipo(htmlTexto: str) -> dict:
-    if not htmlTexto:
-        return {}
-
-    htmlTexto = html.unescape(htmlTexto)
-    soup = BeautifulSoup(htmlTexto, "html.parser")
-
-    resultado = defaultdict(list)
-
-    for row in soup.find_all("tr")[1:]:  # pula cabeçalho
-        cols = row.find_all("td")
-        if len(cols) < 2:
-            continue
-
-        tipo = cols[0].get_text(strip=True).lower()
-        celula = cols[1].get_text(" ", strip=True)
-
-        numeros = re.findall(r'\d+', celula)
-
-        for n in numeros:
-            resultado[tipo].append(normalizarNumero(n))
-
-    # remove duplicados e ordena
-    for tipo in resultado:
-        resultado[tipo] = sorted(set(resultado[tipo]), key=int)
-
-    return dict(resultado)
-"""
-
-def getItxTasks(sessionToken: str, appToken: str, apiUrl: str) -> List[Dict]:
-    headers = {
-        "Content-Type": "application/json",
-        "Session-Token": sessionToken,
-        "App-Token": appToken
-    }
-
-# ===========================================================================
-# BUSCA DOS CHAMADOS
-# ===========================================================================
-    urlPesquisa = f"{apiUrl.rstrip('/')}/search/Ticket"
     parametrosPesquisa = {
-        # Chamados da CGP:
-        """
-        "criteria[0][link]": "AND",
-        "criteria[0][field]": "8",
-        "criteria[0][searchtype]": "contains",
-        "criteria[0][value]": "cgp",
-        """
-
-        # Status: Aberto, Em andamento, Em atendimento, Pendente:
         "criteria[2][link]": "AND",
 
         "criteria[2][criteria][0][link]": "AND",
         "criteria[2][criteria][0][field]": "12",
         "criteria[2][criteria][0][searchtype]": "equals",
-        "criteria[2][criteria][0][value]": "1", #aberto
+        "criteria[2][criteria][0][value]": "1", 
 
         "criteria[2][criteria][1][link]": "OR",
         "criteria[2][criteria][1][field]": "12",
         "criteria[2][criteria][1][searchtype]": "equals",
-        "criteria[2][criteria][1][value]": "2", #em andamento
+        "criteria[2][criteria][1][value]": "2", 
 
         "criteria[2][criteria][2][link]": "OR",
         "criteria[2][criteria][2][field]": "12",
         "criteria[2][criteria][2][searchtype]": "equals",
-        "criteria[2][criteria][2][value]": "3", #em atendimento
+        "criteria[2][criteria][2][value]": "3", 
 
         "criteria[2][criteria][3][link]": "OR",
         "criteria[2][criteria][3][field]": "12",
         "criteria[2][criteria][3][searchtype]": "equals",
-        "criteria[2][criteria][3][value]": "4", #pendente
+        "criteria[2][criteria][3][value]": "4", 
 
-        # Apenas chamados que citem o ITXAutoNTI na task:
         "criteria[3][link]": "AND",
         "criteria[3][field]": "26",
         "criteria[3][searchtype]": "contains",
         "criteria[3][value]": "itxautonti",
     }
 
-    resp = requests.get(urlPesquisa, headers=headers, params=parametrosPesquisa, verify=False)
-    resp.raise_for_status()
-    data = resp.json()
-    tickets = data.get("data", [])
+    try:
+        resp = apiClient.get(urlPesquisa, params=parametrosPesquisa)
+        resp.raise_for_status()
+        data = resp.json()
+        tickets = data.get("data", [])
+    except Exception as e:
+        logger.error(f"Erro ao buscar chamados: {e}")
+        return []
 
     statusMap = {
         "1": "Aberto",
@@ -136,10 +66,10 @@ def getItxTasks(sessionToken: str, appToken: str, apiUrl: str) -> List[Dict]:
     }
 
     statusCheckbox = {
-            "0": "Informação",
-            "1": "A fazer",
-            "2": "Feito"
-        }
+        "0": "Informação",
+        "1": "A fazer", 
+        "2": "Feito"
+    }
 
     keywords = ['itxautonti', '41441']
     foundTasks = []
@@ -150,10 +80,14 @@ def getItxTasks(sessionToken: str, appToken: str, apiUrl: str) -> List[Dict]:
         ticketStatusId = ticket.get("12")
         ticketStatusName = statusMap.get(str(ticketStatusId), "Desconhecido")
 
-        taskUrl = f"{apiUrl.rstrip('/')}/Ticket/{ticketId}/TicketTask"
-        taskResponse = requests.get(taskUrl, headers=headers, verify=False)
-        taskResponse.raise_for_status()
-        tasks = taskResponse.json() or []
+        taskUrl = f"/Ticket/{ticketId}/TicketTask"
+        try:
+            taskResponse = apiClient.get(taskUrl)
+            taskResponse.raise_for_status()
+            tasks = taskResponse.json() or []
+        except Exception as e:
+            logger.error(f"Erro ao buscar tasks do chamado {ticketId}: {e}")
+            continue
 
         hasItxTask = False
 
@@ -161,24 +95,25 @@ def getItxTasks(sessionToken: str, appToken: str, apiUrl: str) -> List[Dict]:
             taskId = task.get("id")
             rawContent = task.get("content") or ""
             contentLower = rawContent.lower()
+            
             taskState = task.get("state")
             stateLabel = statusCheckbox.get(str(taskState), "Desconhecido")
 
             if any(keyword in contentLower for keyword in keywords):
                 hasItxTask = True
 
-                if taskState == 1:  # A fazer
+                if taskState == 1:
                     foundTasks.append({
                         "ticketId": ticketId,
                         "taskId": taskId,
                         "ticketStatus": ticketStatusName,
                         "state": taskState,
                         "stateLabel": stateLabel,
-                        "content": rawContent,
+                        "content": rawContent, 
                         "taskState": "A fazer"
                     })
 
-                elif taskState == 2:  # Feito
+                elif taskState == 2:
                     doneTasksLog.append({
                         "ticketId": ticketId,
                         "taskId": taskId,
@@ -188,40 +123,10 @@ def getItxTasks(sessionToken: str, appToken: str, apiUrl: str) -> List[Dict]:
                     })
 
         if not hasItxTask:
-            print(" ❌ Nenhuma task cita o ITX")
+            logger.info(f"Nenhuma task cita o ITX no chamado {ticketId}")
 
-    widths = [12, 10, 14]
-    totalWidth = 60
-    separatorWidth = sum(widths) + 6  # 12+10+14+6=42
-
-    # Header
-    header = (
-        f"{'🧩 Task':^{widths[0]}}│"
-        f"{'🎫 Chamado':^{widths[1]}}│"
-        f"{'⌛ Status':^{widths[2]}}"
-    )
-    print(header.center(totalWidth))
-
-    # Separator
-    separatorStr = "─" * separatorWidth
-    print(separatorStr.center(totalWidth))
-
-    # Dados
-    for task in foundTasks:
-        line = (
-            f"{str(task['taskId']):>10}│"
-            f"{str(task['ticketId']):>8}│"
-            f"{task['taskState']:<12}"
-        )
-        print(line.center(totalWidth))
-
-    # Separator final
-    print(separatorStr.center(totalWidth))
-
-    # Totais
-    chamados = len(set(t['ticketId'] for t in foundTasks))
+    chamadosCount = len(set(t['ticketId'] for t in foundTasks))
     taskCount = len(foundTasks)
-    print(f"📦 Chamados: {chamados} │ 🍧 Tasks: {taskCount}".center(totalWidth))
-
+    logger.info(f"Encontrados {chamadosCount} chamados e {taskCount} tasks pendentes.")
 
     return foundTasks

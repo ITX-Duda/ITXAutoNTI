@@ -1,9 +1,9 @@
-import requests
 import html
 import re
 import os 
 
 from bs4 import BeautifulSoup
+from src.utils.logger import logger
 from dataclasses import dataclass
 from typing import List, Dict, Any
 from collections import defaultdict
@@ -13,16 +13,20 @@ from src.logic.fuzzy_localizacao import getLocalizacaoFuzzy
 
 @dataclass
 class Instruction:
-    itemId: str                 # index do equipamento
-    patrimonioItem: str         # Prefixo+Numero
-    statusItem: str             # Ativo/Desfazimento/Em andamento/Em manutenção
-    acaoItem: str               # Inserir/Excluir
-    localItem: str              # SS15/Depósito/Biblioteca
-    localFuzzyNome: str
-    localFuzzyCodigo: str
-    tipoItem: str
-    chamadoId: str
-    tarefaId: str
+    """
+    O que faz?
+    Atua como uma 'Data Class' (Dicionário Estruturado de Dados). Armazena as informações mastigadas e traduzidas.
+    """
+    itemId: str                 
+    patrimonioItem: str         
+    statusItem: str             
+    acaoItem: str               
+    localItem: str              
+    localFuzzyNome: str         
+    localFuzzyCodigo: str       
+    tipoItem: str               
+    chamadoId: str              
+    tarefaId: str               
 
     def __str__(self) -> str:
         return (
@@ -52,30 +56,44 @@ tipoMap = {
 }
 
 def normalizarNumero(n):
+    """
+    O que faz?
+    Remove zeros à esquerda e garante que o número extraído do texto seja numérico válido.
+
+    Argumentos Necessários:
+    - n (str): O patrimônio lido na tabela.
+    
+    O que retorna? 
+    - O número limpo em formato string.
+    """
     return str(int(n))
 
 def extrairCamposTask(textoHtml: str) -> dict:
+    """
+    O que faz?
+    Faz a Análise Léxica (Parsing Regex). Lê o texto rico HTML, joga fora a formatação visual e usa Expressões Regulares para encontrar quais opções (Checkboxes) o usuário preencheu.
+
+    Argumentos Necessários:
+    - textoHtml (str): O conteúdo HTML bruto capturado da tarefa.
+
+    O que retorna? 
+    - Dicionário com 'acao', 'statusAtivo' e 'localizacao'.
+    """
     if not textoHtml:
         return {}
 
-    # Limpeza inicial
     textoHtml = html.unescape(textoHtml)
     soup = BeautifulSoup(textoHtml, "html.parser")
 
-    # Remove tabelas e a linha de dica para não interferir na contagem de (X)
     for tabela in soup.find_all("table"):
         tabela.decompose()
     
     texto = soup.get_text("\n", strip=True)
-    
-    # Remove a linha de dica especificamente para não contar o "(X)" de exemplo
     linhas = [l for l in texto.split("\n") if "* dica:" not in l.lower()]
     textoLimpo = "\n".join(linhas)
 
-    # Regex que aceita qualquer caractere (ou espaço) dentro dos parênteses
     regexMarcador = r'\(\s*[^)\s]+\s*\)'
 
-    # --- EXTRAÇÃO DA AÇÃO ---
     matchAcao = re.search(
         r'ação\s*:\s*(.+?)(?=status do ativo:|localiza[çc][aã]o do ativo:|$)',
         textoLimpo, re.IGNORECASE | re.DOTALL
@@ -84,7 +102,6 @@ def extrairCamposTask(textoHtml: str) -> dict:
     valorAcao = None
     if matchAcao:
         blocoAcao = matchAcao.group(1)
-        # Encontra todos os parênteses que NÃO estão vazios
         marcacoes = re.findall(regexMarcador, blocoAcao)
         
         if len(marcacoes) > 1:
@@ -98,7 +115,6 @@ def extrairCamposTask(textoHtml: str) -> dict:
     if not valorAcao:
         raise ValueError("Nenhuma ação marcada! Use (X) Inserir ou (X) Remover")
 
-    # --- EXTRAÇÃO DO STATUS ---
     matchStatus = re.search(
         r'status do ativo\s*:\s*(.+?)(?=localiza[çc][aã]o do ativo:|$)',
         textoLimpo, re.IGNORECASE | re.DOTALL
@@ -106,7 +122,8 @@ def extrairCamposTask(textoHtml: str) -> dict:
     
     valorStatus = None
     if matchStatus:
-        blocoStatus = matchStatus.group(1).replace('\n', ' ') # Remove quebras de linha para a regex não falhar
+        blocoStatus = matchStatus.group(1).replace('\n', ' ') 
+        
         opcoesStatus = [
             "em estoque", "ativo", "desfeito", "irrecuperável", 
             "obsoleto", "disponível para empréstimo", "emprestado", 
@@ -118,7 +135,6 @@ def extrairCamposTask(textoHtml: str) -> dict:
                 valorStatus = opcao
                 break
 
-    # --- EXTRAÇÃO DA LOCALIZAÇÃO ---
     matchLocal = re.search(
         r'localiza[çc][aã]o do ativo\s*:\s*(.+)', 
         textoLimpo, re.IGNORECASE
@@ -132,7 +148,16 @@ def extrairCamposTask(textoHtml: str) -> dict:
     }
 
 def extrairPatrimoniosPorTipo(textoHtml: str) -> dict:
-    """Extrai números de patrimônio da tabela por tipo"""
+    """
+    O que faz?
+    Processador de Tabela Dinâmica. Varre a tabela HTML, capta a relação [Tipo Equipamento] -> [Números de Patrimônio] e empacota os dados de forma limpa.
+
+    Argumentos Necessários:
+    - textoHtml (str): O conteúdo bruto HTML da tarefa.
+
+    O que retorna? 
+    - Agrupamento em Dicionário relacionando os tipos e as listas de códigos de patrimônios.
+    """
     if not textoHtml:
         return {}
 
@@ -141,7 +166,7 @@ def extrairPatrimoniosPorTipo(textoHtml: str) -> dict:
 
     resultado = defaultdict(list)
 
-    for row in soup.find_all("tr")[1:]:  # pula cabeçalho
+    for row in soup.find_all("tr")[1:]:
         cols = row.find_all("td")
         if len(cols) < 2:
             continue
@@ -154,48 +179,55 @@ def extrairPatrimoniosPorTipo(textoHtml: str) -> dict:
         for n in numeros:
             resultado[tipo].append(normalizarNumero(n))
 
-    # remove duplicados e ordena
     for tipo in resultado:
         resultado[tipo] = sorted(set(resultado[tipo]), key=int)
 
     return dict(resultado)
 
-def findItemId(sessionToken: str, appToken: str, apiUrl: str, itemType: str, patrimonioItem: str) -> tuple[str, str] | None:
+def findItemId(apiClient, itemType: str, patrimonioItem: str) -> tuple[str, str] | None:
+    """
+    O que faz?
+    Busca no banco GLPI o UUID numérico invisível do equipamento que a API exige para fazer qualquer Update.
+
+    Argumentos Necessários:
+    - apiClient (ApiClient): Cliente de rede.
+    - itemType (str): Tipo traduzido do equipamento.
+    - patrimonioItem (str): O número do patrimônio.
+
+    O que retorna? 
+    - ID Numérico Banco
+    - Nome Completo do Patrimônio
+    """
     
     if not itemType or itemType == "None":
-        print(f"⚠️ Pulando busca: itemType inválido '{itemType}' para patrimônio {patrimonioItem}")
+        logger.warning(f"Pulando busca: itemType inválido '{itemType}' para patrimônio {patrimonioItem}")
         return None
-    
-    headers = {
-        "Content-Type": "application/json",
-        "Session-Token": sessionToken,
-        "App-Token": appToken
-    }
 
-    # =========================
-    # BUSCA DOS CHAMADOS
-    # =========================
-    urlPesquisa = f"{apiUrl.rstrip('/')}/search/{itemType}"
+    urlPesquisa = f"/search/{itemType}"
 
     parametros = {
-        "criteria[0][field]": "1", # patrimonio
+        "criteria[0][field]": "1", 
         "criteria[0][searchtype]": "contains",
         "criteria[0][value]": patrimonioItem, 
-        "forcedisplay[0]": "2",
-        "forcedisplay[1]": "1",
+        "forcedisplay[0]": "2", 
+        "forcedisplay[1]": "1", 
     }
     
-    resp = requests.get(urlPesquisa, headers=headers, params=parametros, verify=False)
-    resp.raise_for_status()
-    data = resp.json()
-    resultado = data.get("data", [])
+    try:
+        resp = apiClient.get(urlPesquisa, params=parametros)
+        resp.raise_for_status()
+        data = resp.json()
+        resultado = data.get("data", [])
+    except Exception as e:
+        logger.error(f"⚠️ Erro ao buscar item {patrimonioItem}: {e}")
+        return None
     
     if not resultado:
         return None
 
     primeiraColuna = resultado[0]
-    itemId = primeiraColuna.get("2")  # id interno
-    itemNome = primeiraColuna.get("1")  # nome (ex: UF038380)
+    itemId = primeiraColuna.get("2")    
+    itemNome = primeiraColuna.get("1")  
 
     if not itemId or not itemNome:
         return None
@@ -203,19 +235,28 @@ def findItemId(sessionToken: str, appToken: str, apiUrl: str, itemType: str, pat
     return str(itemId), str(itemNome)
 
 
-def parseTaskInstruction(dadosTarefa: Dict[str, Any], sessionToken: str, appToken: str, apiUrl: str) -> List[Instruction]:
+def parseTaskInstruction(dadosTarefa: Dict[str, Any], apiClient) -> List[Instruction]:
+    """
+    O que faz?
+    O Maestro deste Módulo. É o funil que engole os dados vindos do Retriever e aglutina todas as funções, devolvendo as Instruções Finais formatadas.
+
+    Argumentos Necessários:
+    - dadosTarefa (Dict): Os parâmetros brutos da tarefa.
+    - apiClient (ApiClient): Cliente de rede.
+
+    O que retorna? 
+    - Fila de ações lineares limpas para a etapa de execução de transações.
+    """
 
     chamadoId = str(dadosTarefa.get("ticketId") or dadosTarefa.get("ticket_id") or "")
     tarefaId = str(dadosTarefa.get("taskId") or dadosTarefa.get("task_id") or "")
 
-    # Pega content da task
     content = dadosTarefa.get("content")
     if not content:
-        print(f"❌ Task {tarefaId}: sem content")
+        logger.error(f"🛑 ERRO! Task {tarefaId}: sem content")
         return []
     
     try:
-        # Extrai tudo da task
         campos = extrairCamposTask(content)
         patrimoniosPorTipo = extrairPatrimoniosPorTipo(content)
         
@@ -223,16 +264,13 @@ def parseTaskInstruction(dadosTarefa: Dict[str, Any], sessionToken: str, appToke
         statusAtivo = campos.get("statusAtivo")
         localItem = campos.get("localizacao")
         
-        # Validações (Status e Local agora são opcionais e não quebram o código)
         if not acaoItem:
             raise ValueError("Nenhuma ação marcada!")
         if not patrimoniosPorTipo:
-            raise ValueError("Nenhum patrimônio na tabela!")
-        
-        print(f"✅ Task {tarefaId}: Ação: {acaoItem} / Status: {statusAtivo} / Local: {localItem}")
+            raise ValueError(" Nenhum patrimônio na tabela!")
         
     except ValueError as e:
-        print(f"❌ Task {tarefaId} inválida: {e}")
+        logger.error(f"Task {tarefaId} inválida: {e}")
         return []
     
     instructions: List[Instruction] = []
@@ -240,24 +278,22 @@ def parseTaskInstruction(dadosTarefa: Dict[str, Any], sessionToken: str, appToke
     for tipo, listaIds in patrimoniosPorTipo.items():
         tipoGlpi = tipoMap.get(tipo.lower())
         if not tipoGlpi:
-            print(f"⚠️ Tipo '{tipo}' não mapeado")
+            logger.warning(f"Tipo '{tipo}' não mapeado")
             continue
         
         for equipamentoId in listaIds:
             equipamentoIdStr = str(equipamentoId)
             
-            # Chama o fuzzy com proteção caso o localItem venha vazio (None)
             matchLocal = getLocalizacaoFuzzy(localItem) if localItem else None
             fuzzyNome = matchLocal["Nome"] if matchLocal else ""
             fuzzyCodigo = matchLocal["Codigo"] if matchLocal else ""
             
-            itemData = findItemId(sessionToken, appToken, apiUrl, tipoGlpi, equipamentoIdStr)
+            itemData = findItemId(apiClient, tipoGlpi, equipamentoIdStr)
             
-            # --- SE NÃO ACHOU NO GLPI, MANDA PRO CSV COM ERRO ---
             if not itemData:
                 instructions.append(Instruction(
-                    itemId="",  # Deixamos vazio para o executor saber que falhou
-                    patrimonioItem=equipamentoIdStr, # Só o número digitado na task
+                    itemId="",
+                    patrimonioItem=equipamentoIdStr,
                     chamadoId=chamadoId,
                     tarefaId=tarefaId,
                     acaoItem=acaoItem,
@@ -268,9 +304,7 @@ def parseTaskInstruction(dadosTarefa: Dict[str, Any], sessionToken: str, appToke
                     tipoItem=tipoGlpi,
                 ))
                 continue
-            # ---------------------------------------------------
             
-            # Se achou no GLPI, segue o jogo normal:
             itemId, itemNome = itemData
             
             instructions.append(Instruction(

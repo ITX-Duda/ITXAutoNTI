@@ -40,7 +40,7 @@ O fluxo de processamento é dividido em quatro módulos principais, operando em 
 * 📚 **Leitura Inteligente:** O robô lê e entende a tarefa exatamente como o analista a escreveu.
 * 📦 **Execução em Lote:** Capacidade de associar múltiplos patrimônios ao chamado de forma simultânea.
 * ⚡ **Comunicação Direta via API:** Executa todas as operações diretamente na API REST do GLPI (rápido e invisível).
-* 🦡 **"O Texugo" (Notificações):** Responde automaticamente ao chamado informando o sucesso da operação.
+* 🦡 **Resposta Automática:** Responde automaticamente ao chamado informando o sucesso da operação.
 * 📊 **Histórico e Auditoria:** Anexa automaticamente o arquivo `ITX_Relatorio.csv` com logs detalhados e status das ações.
 
 ---
@@ -133,12 +133,12 @@ Este projeto é fruto da pesquisa, dedicação e genialidade de uma equipe focad
 O código-fonte, arquitetura, design e lógica do sistema **ITXAutoNTI** constituem patrimônio intelectual desenvolvido pela equipe supracitada. Este repositório reflete a versão oficial `v1.0.0` para fins de registro formal e documentação de autoria.
 
 **Aviso de Direitos:**
-© 2026 Equipe ITXAutoNTI. Todos os direitos reservados. O uso, modificação ou distribuição de partes ou da totalidade deste software deve respeitar as condições estabelecidas no modelo de licenciamento aplicável a este repositório.
+© 2026 Equipe ITXAutoNTI. 
+Todos os direitos reservados. O uso, modificação ou distribuição de partes ou da totalidade deste software deve respeitar as condições estabelecidas no modelo de licenciamento aplicável a este repositório.
 
 ---
 
 <p align="center">
   <img src="https://img.icons8.com/neon/96/bot.png" width="32px" alt="bot"><br>
   <b>Desenvolvido pela Equipe ITXAutoNTI!</b><br>
-  <i>Automatizando o presente, construindo o futuro.</i>
 </p>

@@ -176,6 +176,12 @@ def extrairPatrimoniosPorTipo(textoHtml: str) -> dict:
 
         numeros = re.findall(r'\d+', celula)
 
+        for intervalo in re.finditer(r'(\d+)\s*(?:a|até|ate|-|–)\s*(\d+)', celula, re.IGNORECASE):
+            patrimonioInicial = int(intervalo.group(1))
+            patrimonioFinal = int(intervalo.group(2))
+            if(patrimonioFinal > patrimonioInicial):
+                for patrimonio in range(patrimonioInicial + 1, patrimonioFinal):
+                    numeros.append(str(patrimonio))
         for n in numeros:
             resultado[tipo].append(normalizarNumero(n))
 

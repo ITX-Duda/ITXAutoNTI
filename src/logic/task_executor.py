@@ -386,9 +386,16 @@ def processSingleAsset(apiClient, instruction: Instruction) -> Result:
         "manutencao": 3,
     }
     realStatus = mapStatus.get(textoStatus)
-
+    '''
+    FonteAtualizacao = {
+        "GLPI Native": 1,
+        "FOG Server": 2,
+        "ITXAutoNTI": 3
+    }
+    '''
     fields: Dict[str, Any] = {}
     fields["id"] = itemId 
+    fields['autoupdatesystems_id'] = 3
 
     if realStatus is not None:
         fields["states_id"] = realStatus

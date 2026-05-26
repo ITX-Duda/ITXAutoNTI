@@ -27,37 +27,27 @@ def main():
     - 0 para sucesso de execução
     - 1 para falha de execução
     """
-    logger.info(". ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁. ")
-    logger.info("Uai sô... iniciando os trem aqui 🤝")
-    logger.info("ITXAutoNTI v1.0.0 - 18/04/2026")
-    logger.info("Se ajeita aí que lá vem log da operação:")
-    logger.info(". ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁. ")
-    logger.info("======= ITXAutoNTI Conectando ao GLPI =======")
+    logger.info("Iniciando operacao.")
+    logger.info("ITXAutoNTI v1.2.0")
+    logger.info("Conectando ao GLPI")
     
     if not chaves:
-        logger.error("🛑 Erro crítico nas variáveis de ambiente (.env). Sistema interrompido.")
+        logger.error("Erro critico nas variaveis de ambiente (.env). Sistema interrompido.")
         return 1
 
     apiUrl = chaves.get("GLPI_API_URL")
     appToken = chaves.get("GLPI_APP_TOKEN")
     userToken = chaves.get("GLPI_USER_TOKEN")
 
-    logger.info("⏳ Carregando configurações...")
     if not all([apiUrl, appToken, userToken]):
-        logger.error("🛑 Credenciais insuficientes no config_loader. Abortando.")
+        logger.error("Credenciais insuficientes no config_loader. Abortando.")
         return 1
-    logger.info("✅ Configurações OK.")
 
-    logger.info("⌛ Autenticando no GLPI...")
     apiClient = ApiClient(apiUrl, appToken, userToken)
     
     if not apiClient.initSession():
-        logger.error("🛑 Falha no initSession (Autenticação não concluída).")
+        logger.error("Falha no initSession (Autenticacao nao concluida).")
         return 1
-
-    logger.info(". ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁. ")
-    logger.info("======= Buscando Tarefas =======")
-    logger.info("Pesquisa dos chamados e das tasks que citam o ITXAutoNTI.")
     
     tasksEncontradas = getItxTasks(apiClient)
 
@@ -66,8 +56,7 @@ def main():
         apiClient.killSession()
         return 0
 
-    logger.info(". ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁. ")
-    logger.info("======= Executando Tarefas =======")
+    logger.info("Executando Tarefas")
 
     for idx, t in enumerate(tasksEncontradas, 1):
         ticketId = t.get("ticketId")
@@ -92,12 +81,9 @@ def main():
         )
 
         if resClose.get("success"):
-            logger.info("🥳 Task fechada.")
+            logger.info(f"Task fechada: #{taskId}.")
         else:
             logger.error(f"Erro ao fechar ou subir anexo: {resClose}")
-
-    logger.info(". ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁. ")
-    logger.info("✅ Tudo Finalizado.")
     
     apiClient.killSession()
     return 0

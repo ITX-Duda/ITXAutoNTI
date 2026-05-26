@@ -1,5 +1,6 @@
 import csv
 import os
+import tempfile
 from datetime import datetime
 from dataclasses import dataclass
 from typing import Dict, Any, List, Optional
@@ -29,7 +30,7 @@ def getStatusELocalItem(apiClient, itemType: str, itemId: str) -> tuple[str, str
         resp = apiClient.get(url, params=params)
         resp.raise_for_status()
     except Exception as e:
-        logger.error(f"⚠️ Erro em getStatusELocalItem: {e}")
+        logger.error(f"Erro em getStatusELocalItem: {e}")
         return f"ERRO", "N/A"
 
     data = resp.json()
@@ -97,7 +98,7 @@ def getLocationIdByCode(apiClient, codigo: str, nome: str) -> str:
                     if idInterno and idInterno != "None":
                         return idInterno
             except Exception as e:
-                logger.warning(f"⚠️ Erro em getLocationIdByCode termo {termo}: {e}")
+                logger.warning(f"Erro em getLocationIdByCode termo {termo}: {e}")
                 continue
                 
     return None
@@ -120,7 +121,7 @@ def getEstadoAtualItem(apiClient, itemType: str, itemId: int) -> str:
         resp = apiClient.get(url)
         resp.raise_for_status()
     except Exception as e:
-        logger.error(f"⚠️ Erro ao buscar estado atual: {e}")
+        logger.error(f"Erro ao buscar estado atual: {e}")
         return f"ERRO_GET"
 
     data = resp.json()
@@ -142,10 +143,7 @@ def gerarHistoricoCsv(results: List[Result], chamadoId: str, tarefaId: str) -> s
     O que retorna? 
     - Caminho absoluto na máquina de onde o CSV foi salvo para ser upado.
     """
-    projectRoot = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-    reportsDir = os.path.join(projectRoot, "relatorios")
-    
-    os.makedirs(reportsDir, exist_ok=True)
+    reportsDir = tempfile.gettempdir()
     
     fileName = f"historico_chamado_{chamadoId}_task_{tarefaId}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
     filePath = os.path.join(reportsDir, fileName)
@@ -204,8 +202,6 @@ def gerarHistoricoCsv(results: List[Result], chamadoId: str, tarefaId: str) -> s
                     result.erro or "",
                 ]
             )
-
-    logger.info(f"📜 Histórico salvo: {fileName}")
     return filePath
 
 
@@ -239,7 +235,7 @@ def associarItemAoChamado(apiClient, instruction: Instruction) -> str:
         resp.raise_for_status()
         return f"Assoc:{resp.status_code}"
     except Exception as e:
-        logger.error(f"⚠️ Erro ao associar item: {e}")
+        logger.error(f"Erro ao associar item: {e}")
         return "Assoc:ERRO"
 
 
@@ -264,7 +260,7 @@ def removerItemDoChamado(apiClient, instruction: Instruction) -> str:
         resp = apiClient.get(urlList)
         resp.raise_for_status()
     except Exception as e:
-        logger.error(f"⚠️ Erro Listar vínculos: {e}")
+        logger.error(f"Erro Listar vinculos: {e}")
         return f"List ERRO"
 
     data = resp.json() or []
@@ -286,7 +282,7 @@ def removerItemDoChamado(apiClient, instruction: Instruction) -> str:
         try:
             apiClient.delete(urlDel) 
         except Exception as e:
-            logger.error(f"⚠️ Erro ao remover vínculo: {e}")
+            logger.error(f"Erro ao remover vinculo: {e}")
 
     return f"Removidos {len(vinculos)} vínculos"
 
@@ -308,19 +304,18 @@ def executeFromParsedTask(apiClient, taskInstructions: List[Instruction]) -> tup
 
     sucessos = 0
     total = len(taskInstructions)
-    logger.info(f"⚙️ Iniciando execução de {total} itens no GLPI...")
+    logger.info(f"Iniciando execucao de {total} itens no GLPI...")
 
     for i, instruction in enumerate(taskInstructions, 1):
-        logger.info(f"  ▶ [{i}/{total}] Processando {instruction.patrimonioItem} ({instruction.tipoItem})...")
         result = processSingleAsset(apiClient, instruction)
         results.append(result)
 
         if result.success:
             sucessos += 1
         else:
-            logger.warning(f"⚠️ Falha na instrução: {result.erro}")
+            logger.warning(f"Falha na instrucao: {result.erro}")
 
-    logger.info(f"✨ {sucessos}/{total} itens concluídos com sucesso.")
+    logger.info(f"{sucessos}/{total} itens concluidos com sucesso.")
 
     if results:
         csvFile = gerarHistoricoCsv(
@@ -328,7 +323,6 @@ def executeFromParsedTask(apiClient, taskInstructions: List[Instruction]) -> tup
             results[0].chamadoId,
             results[0].tarefaId,
         )
-        logger.info(f"📊 CSV Gerado: {csvFile}")
         return results, csvFile
 
     return results, None
@@ -405,7 +399,7 @@ def processSingleAsset(apiClient, instruction: Instruction) -> Result:
         if locId:
             fields["locations_id"] = int(locId)
         else:
-            logger.warning(f"😞 ID  não encontrado no GLPI para o patrimônio {instruction.localFuzzyCodigo}")
+            logger.warning(f"ID nao encontrado no GLPI para o patrimonio {instruction.localFuzzyCodigo}")
 
     msgUpdate = "Sem alterações"
     msgAssoc = "Sem associação"

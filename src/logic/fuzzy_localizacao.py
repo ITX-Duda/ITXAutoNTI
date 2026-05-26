@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-from fuzzywuzzy import fuzz, process
+from rapidfuzz import fuzz, process
 
 SCORE_CUTOFF = 85
 

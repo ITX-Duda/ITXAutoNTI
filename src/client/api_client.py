@@ -47,7 +47,7 @@ class ApiClient:
                 logger.error("Token de sessão não recebido da API.")
                 return False
 
-            logger.info("✅ Autenticação bem-sucedida.")
+            logger.info("Autenticacao bem-sucedida.")
             
             sessionHeaders = {
                 'App-Token': self.appToken,

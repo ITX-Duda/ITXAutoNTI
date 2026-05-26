@@ -51,6 +51,8 @@ tipoMap = {
     "monitores": "Monitor",
     "impressora": "Printer",
     "impressoras": "Printer",
+    "telefone": "Phone",
+    "telefones": "Phone",
     "dispositivos": "peripheral",  
     "dispositivo": "peripheral",
 }

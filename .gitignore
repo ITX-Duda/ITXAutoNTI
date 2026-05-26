@@ -1,32 +1,38 @@
 # Ambiente Virtual
 venv/
 .venv/
+env/
 
 # Arquivos de Configuração Secretos
 config/.env
 .env
+*.env
+scr/logic/.csv
 
 # Cache do Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
 # Cache de Testes
 .pytest_cache/
+.coverage
+
+# Logs, Relatórios e Dados
+logs/
+*.log
+relatorios/
+*.csv
 
 # Documentação local
 docs/
 
-# Scripts de debug
+# Editores de código e OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Scripts de debug e outros específicos
 scripts/debug_fields.py
-.venv
-.gitignore
-
-historico_chamado_107713_task_15572_20260312_164527.csv
-.gitignore
-historico_chamado_107713_task_15572_20260312_163033.csv
-historico_chamado_107713_task_15572_20260312_163651.csv
-.gitignore
-src/logic/task_cleaner.py
-
-#ignora relatorios
-relatorios/

@@ -4,4 +4,3 @@ numpy==2.2.6
 pandas==2.3.3
 python-dotenv==1.2.2
 RapidFuzz==3.14.3
-requests==2.32.5

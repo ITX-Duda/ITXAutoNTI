@@ -1,0 +1,65 @@
+    ~/Documents/Dudinha_Vault/10_PROJECTS/11_GITHUB_PROJECTS/ITXAutoNTI    chore/logs-and-dependency-update !1 ?1 ················· ITXAutoNTI   06:52:45 PM  
+❯ curl -k -v "https://servicoshomolog.ufabc.int.br/apirest.php/Ticket/107710" \
+     -H "App-Token: O3Sm8Qzq2K0jhdQdjTi1H9g76VM6LARTo2TcH1lP" \
+     -H "Session-Token: c7700ef4tjj479d8cgbokihmvd"
+* Host servicoshomolog.ufabc.int.br:443 was resolved.
+* IPv6: (none)
+* IPv4: 172.17.3.126
+*   Trying 172.17.3.126:443...
+* ALPN: curl offers h2,http/1.1
+* TLSv1.3 (OUT), TLS handshake, Client hello (1):
+* TLSv1.3 (IN), TLS handshake, Server hello (2):
+* TLSv1.2 (IN), TLS handshake, Certificate (11):
+* TLSv1.2 (IN), TLS handshake, Server key exchange (12):
+* TLSv1.2 (IN), TLS handshake, Server finished (14):
+* TLSv1.2 (OUT), TLS handshake, Client key exchange (16):
+* TLSv1.2 (OUT), TLS change cipher, Change cipher spec (1):
+* TLSv1.2 (OUT), TLS handshake, Finished (20):
+* TLSv1.2 (IN), TLS handshake, Finished (20):
+* SSL connection using TLSv1.2 / ECDHE-RSA-AES256-GCM-SHA384 / x25519 / RSASSA-PSS
+* ALPN: server accepted h2
+* Server certificate:
+*  subject: C=BR; ST=Sao Paulo; L=Santo Andre; O=Fundacao Universidade Federal do ABC - UFABC; CN=servicoshomolog.ufabc.int.br; emailAddress=datacenter.adm@ufabc.edu.br
+*  start date: Mar 22 17:25:39 2023 GMT
+*  expire date: Mar 21 17:25:39 2024 GMT
+*  issuer: C=BR; ST=Sao Paulo; L=Santo Andre; O=Fundacao Universidade Federal do ABC - UFABC; CN=servicoshomolog.ufabc.int.br; emailAddress=datacenter.adm@ufabc.edu.br
+*  SSL certificate verify result: self-signed certificate (18), continuing anyway.
+*   Certificate level 0: Public key type RSA (4096/152 Bits/secBits), signed using sha256WithRSAEncryption
+* Connected to servicoshomolog.ufabc.int.br (172.17.3.126) port 443
+* using HTTP/2
+* [HTTP/2] [1] OPENED stream for https://servicoshomolog.ufabc.int.br/apirest.php/Ticket/107710
+* [HTTP/2] [1] [:method: GET]
+* [HTTP/2] [1] [:scheme: https]
+* [HTTP/2] [1] [:authority: servicoshomolog.ufabc.int.br]
+* [HTTP/2] [1] [:path: /apirest.php/Ticket/107710]
+* [HTTP/2] [1] [user-agent: curl/8.15.0]
+* [HTTP/2] [1] [accept: */*]
+* [HTTP/2] [1] [app-token: O3Sm8Qzq2K0jhdQdjTi1H9g76VM6LARTo2TcH1lP]
+* [HTTP/2] [1] [session-token: c7700ef4tjj479d8cgbokihmvd]
+> GET /apirest.php/Ticket/107710 HTTP/2
+> Host: servicoshomolog.ufabc.int.br
+> User-Agent: curl/8.15.0
+> Accept: */*
+> App-Token: O3Sm8Qzq2K0jhdQdjTi1H9g76VM6LARTo2TcH1lP
+> Session-Token: c7700ef4tjj479d8cgbokihmvd
+> 
+* Request completely sent off
+< HTTP/2 200 
+< date: Tue, 26 May 2026 21:53:20 GMT
+< server: Apache/2.4.37 (Rocky Linux) OpenSSL/1.1.1k
+< strict-transport-security: max-age=63072000; includeSubDomains; preload
+< x-frame-options: SAMEORIGIN
+< x-content-type-options: nosniff
+< x-powered-by: PHP/8.3.24
+< access-control-expose-headers: content-type, content-range, accept-range
+< pragma: no-cache
+< cache-control: no-store, no-cache, must-revalidate
+< expires: Sat, 26 Jul 1997 05:00:00 GMT
+< strict-transport-security: max-age=63072000; includeSubDomains; preload
+< x-frame-options: SAMEORIGIN
+< x-content-type-options: nosniff
+< last-modified: Tue, 26 May 2026 21:04:07 GMT
+< content-type: application/json; charset=UTF-8
+< 
+{"id":107710,"entities_id":0,"name":"Empréstimo -  São Bernardo do Campo","date":"2026-01-25 17:46:07","closedate":null,"solvedate":null,"takeintoaccountdate":"2026-01-28 14:34:49","date_mod":"2026-05-26 18:04:07","users_id_lastupdater":35416,"status":1,"users_id_recipient":5618,"requesttypes_id":7,"content":"&#60;div&#62;&#60;h1&#62;Dados do formulário&#60;/h1&#62;&#60;h2&#62;ATENÇÃO&#60;/h2&#62;&#60;div&#62;&#38;nbsp;&#60;/div&#62;&#60;h2&#62;Tipo de solicitação&#60;/h2&#62;&#60;div&#62;&#60;b&#62;1) Escolha a opção : &#60;/b&#62;Empréstimo&#60;/div&#62;&#60;div&#62;&#38;nbsp;&#60;/div&#62;&#60;h2&#62;Termo de uso&#60;/h2&#62;&#60;div&#62;&#60;b&#62;2) Deseja visualizar os termos de uso e demais informações sobre o serviço/atendimento? : &#60;/b&#62;Não&#60;/div&#62;&#60;div&#62;&#38;nbsp;&#60;/div&#62;&#60;h2&#62;Meus Dados&#60;/h2&#62;&#60;div&#62;&#60;b&#62;3) Nome : &#60;/b&#62;ERIK FARIAS LIMA&#60;/div&#62;&#60;div&#62;&#60;b&#62;4) E-mail institucional : &#60;/b&#62;&#60;/div&#62;&#60;div&#62;&#60;b&#62;5) Vínculo : &#60;/b&#62;Docente&#60;/div&#62;&#60;div&#62;&#60;b&#62;6) SIAPE : &#60;/b&#62;&#60;/div&#62;&#60;div&#62;&#60;b&#62;7) Telefone / Ramal para contato : &#60;/b&#62;&#60;/div&#62;&#60;div&#62;&#60;b&#62;8) Necessita incluir mais um usuário para acompanhamento desta solicitação? Se sim, indique abaixo: : &#60;/b&#62;&#60;/div&#62;&#60;div&#62;&#38;nbsp;&#60;/div&#62;&#60;h2&#62;Local de empréstimo do(s) equipamento(s)&#60;/h2&#62;&#60;div&#62;&#60;b&#62;9) Campus : &#60;/b&#62;São Bernardo do Campo&#60;/div&#62;&#60;div&#62;&#60;b&#62;10) Blocos São Bernardo : &#60;/b&#62;SAAT202A201 - SA - BL A - TORRE 2 - 2º ANDAR - 201-0&#60;/div&#62;&#60;div&#62;&#60;b&#62;11) Andar : &#60;/b&#62;A &#38;#62; 02&#60;/div&#62;&#60;div&#62;&#60;b&#62;12) Complemento : &#60;/b&#62;&#60;/div&#62;&#60;div&#62;&#38;nbsp;&#60;/div&#62;&#60;h2&#62;Informações necessárias para Empréstimo&#60;/h2&#62;&#60;div&#62;&#60;b&#62;13) Informe o equipamentos e a quantidade que necessita para empréstimo : &#60;/b&#62;&#60;table style=\"border-collapse: collapse; width: 67.1533%; height: 230px;\" border=\"1\"&#62;&#60;colgroup&#62;&#60;col style=\"width: 78.9415%;\"&#62;&#60;col style=\"width: 21.0586%;\"&#62;&#60;/colgroup&#62;\n&#60;tbody&#62;\n&#60;tr style=\"height: 23px;\"&#62;\n&#60;td style=\"text-align: center; height: 23px; background-color: #ced4d9;\"&#62;&#60;strong&#62;EQUIPAMENTO:&#60;/strong&#62;&#60;/td&#62;\n&#60;td style=\"text-align: center; height: 23px; background-color: #ced4d9;\"&#62;&#60;strong&#62;QUANTIDADE:&#60;/strong&#62;&#60;/td&#62;\n&#60;/tr&#62;\n&#60;tr style=\"height: 23px;\"&#62;\n&#60;td style=\"height: 23px;\"&#62;Ronaldo&#60;/td&#62;\n&#60;td style=\"height: 23px; text-align: center;\"&#62;4&#60;/td&#62;\n&#60;/tr&#62;\n&#60;/tbody&#62;\n&#60;/table&#62;\n&#60;p&#62; &#60;/p&#62;\n&#60;p&#62;Utilize a tecla TAB para adicionar linhas&#60;/p&#62;&#60;/div&#62;&#60;div&#62;&#60;b&#62;14) Data de Empréstimo : &#60;/b&#62;04/04/2004&#60;/div&#62;&#60;div&#62;&#60;b&#62;15) Horário de ínicio do evento : &#60;/b&#62;09:09&#60;/div&#62;&#60;div&#62;&#60;b&#62;16) Data de Devolução : &#60;/b&#62;09/09/2009&#60;/div&#62;&#60;div&#62;&#60;b&#62;17) Justificativa para o empréstimo, qual será o uso do(s) equipamento(s) : &#60;/b&#62;&#60;p&#62;ITX&#60;/p&#62;&#60;/div&#62;&#60;div&#62;&#38;nbsp;&#60;/div&#62;&#60;h2&#62;Dados complementares&#60;/h2&#62;&#60;div&#62;&#60;b&#62;18) Arquivo : &#60;/b&#62;Nenhum documento anexado&#60;/div&#62;&#60;div&#62;&#60;b&#62;19) Observações : &#60;/b&#62;&#60;/div&#62;&#60;div&#62;&#60;b&#62;20) Solicitante é Pessoa com Deficiência (PcD)? : &#60;/b&#62;Não&#60;/div&#62;&#60;div&#62;&#60;b&#62;21) Aceite do Termo de Uso : &#60;/b&#62;Concordo com os termos desta solicitação e declaro que as informações prestadas a seguir são verdadeiras, assumindo a inteira responsabilidade pelas mesmas&#60;/div&#62;&#60;/div&#62;","urgency":3,"impact":3,"priority":3,"itilcategories_id":0,"type":2,"global_validation":1,"slas_id_ttr":4,"slas_id_tto":0,"slalevels_id_ttr":0,"time_to_resolve":"2026-03-19 10:06:44","time_to_own":null,"begin_waiting_date":null,"sla_waiting_duration":1519604,"ola_waiting_duration":0,"olas_id_tto":0,"olas_id_ttr":0,"olalevels_id_ttr":0,"ola_ttr_begin_date":null,"internal_time_to_resolve":null,"internal_time_to_own":null,"waiting_duration":1519604,"close_delay_stat":0,"solve_delay_stat":0,"takeintoaccount_delay_stat":110089,"actiontime":3600,"is_deleted":0,"locations_id":0,"validation_percent":0,"date_creation":"2026-01-25 17:46:07","ola_tto_begin_date":null,"links":[{"rel":"Entity","href":"https://servicoshomolog.ufabc.int.br/apirest.php/Entity/0"},{"rel":"User","href":"https://servicoshomolog.ufabc.int.br/apirest.php/User/35416"},{"rel":"User","href":"https://servicoshomolog.ufabc.int.br/apirest.php/User/5618"},{"rel":"RequestType","href":"https://servicoshomolog.ufabc.int.br/apirest.php/RequestType/7"},{"rel":"SLA","href":"https://servicoshomolog.ufabc.int.br/apirest.php/SLA/4"},{"rel":"Document_Item","href":"https://servicoshomolog.ufabc.int.br/apirest.php/Ticket/107710/Document_Item/"},{"rel":"TicketTask","href":"https://servicoshomolog.ufabc.int.br/apirest.php/Ticket/107710/TicketTask/"},{"rel":"TicketValidation","href":"https://servicoshomolog.ufabc.int.br/apirest.php/Ticket/107710/TicketValidation/"},{"rel":"TicketCost","href":"https://servicoshomolog.ufabc.int.br/apirest.php/Ticket/107710/TicketCost/"},{"rel":"Problem_Ticket","href":"https://servicoshomolog.ufabc.int.br/apirest.php/Ticket/107710/Problem_Ticket/"},{"rel":"Change_Ticket","href":"https://servicoshomolog.ufabc.int.br/apirest.php/Ticket/107710/Change_Ticket/"},{"rel":"Item_Ticket","href":"https://servicoshomolog.ufabc.int.br/apirest.php/Ticket/107710/Item_Ticket/"},{"rel":"ITILSolution","href":"https://servicoshomolog.ufabc.int.br/apirest.php/Ticket/107710/ITILSolution/"},{"rel":"ITILFollowup","href":"https://servicoshomolog.ufabc.int.br/apirest.php/Ticket/107710/ITILFollowup/"},{"rel":"Ticket_User","href":"https://servicoshomolog.ufabc.int.br/apirest.php/Tick* Connection #0 to host servicoshomolog.ufabc.int.br left intact
+et/107710/Ticket_User/"},{"rel":"Group_Ticket","href":"https://servicoshomolog.ufabc.int.br/apirest.php/Ticket/107710/Group_Ticket/"},{"rel":"Supplier_Ticket","href":"https://servicoshomolog.ufabc.int.br/apirest.php/Ticket/107710/Supplier_Ticket/"}]}%    

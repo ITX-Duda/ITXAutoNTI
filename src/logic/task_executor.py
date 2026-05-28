@@ -417,8 +417,12 @@ def processSingleAsset(apiClient, instruction: Instruction) -> Result:
         else:
             msgAssoc = f"Ação desconhecida: {instruction.acaoItem}"
 
-        statusDepois, _ = getStatusELocalItem(apiClient, itemType, str(itemId))
-        localDepois = novaLocal or localAntes
+        statusDepois, localApos = getStatusELocalItem(apiClient, itemType, str(itemId))
+
+        if localApos and localApos != "?":
+            localDepois = localApos
+        else:
+            localDepois = instruction.localFuzzyNome or localAntes
 
         lancStatus = (
             f"STATUS_ANTES:{statusAntes}"

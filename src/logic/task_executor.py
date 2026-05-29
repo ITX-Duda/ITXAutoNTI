@@ -77,7 +77,7 @@ def getLocationIdByCode(apiClient, codigo: str, nome: str) -> str:
     - ID interno da localização
     """
     url = f"/search/Location"
-    tentativas = [codigo, nome]
+    tentativas = [codigo, nome, nome.replace(" - ", " > "), nome.replace("-", " > ")]
     
     for termo in tentativas:
         if not termo: continue
@@ -93,6 +93,7 @@ def getLocationIdByCode(apiClient, codigo: str, nome: str) -> str:
                 resp = apiClient.get(url, params=params)
                 resp.raise_for_status()
                 data = resp.json()
+
                 if data.get("data") and len(data["data"]) > 0:
                     idInterno = str(data["data"][0].get("2"))
                     if idInterno and idInterno != "None":
@@ -100,7 +101,24 @@ def getLocationIdByCode(apiClient, codigo: str, nome: str) -> str:
             except Exception as e:
                 logger.warning(f"Erro em getLocationIdByCode termo {termo}: {e}")
                 continue
-                
+    palavra_chave = nome.split("-")[-1].strip()
+    if palavra_chave:
+        params_sobrevivencia = {
+            "criteria[0][field]": "1",
+            "criteria[0][searchtype]": "contains",
+            "criteria[0][value]": palavra_chave,
+            "forcedisplay[0]": "2"
+        }
+        try:
+            resp = apiClient.get(url, params=params_sobrevivencia)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("data") and len(data["data"]) > 0:
+                    idInterno = str(data["data"][0].get("2"))
+                    if idInterno and idInterno != "None":
+                        return idInterno
+        except Exception:
+            pass
     return None
 
 def getEstadoAtualItem(apiClient, itemType: str, itemId: int) -> str:
@@ -400,8 +418,6 @@ def processSingleAsset(apiClient, instruction: Instruction) -> Result:
         locId = getLocationIdByCode(apiClient, instruction.localFuzzyCodigo, instruction.localFuzzyNome)
         if locId:
             fields["locations_id"] = int(locId)
-        else:
-            logger.warning(f"ID nao encontrado no GLPI para o patrimonio {instruction.localFuzzyCodigo}")
 
     msgUpdate = "Sem alterações"
     msgAssoc = "Sem associação"
@@ -419,8 +435,12 @@ def processSingleAsset(apiClient, instruction: Instruction) -> Result:
         else:
             msgAssoc = f"Ação desconhecida: {instruction.acaoItem}"
 
-        statusDepois, _ = getStatusELocalItem(apiClient, itemType, str(itemId))
-        localDepois = novaLocal or localAntes
+        statusDepois, localApos = getStatusELocalItem(apiClient, itemType, str(itemId))
+
+        if localApos and localApos != "?":
+            localDepois = localApos
+        else:
+            localDepois = instruction.localFuzzyNome or localAntes
 
         lancStatus = (
             f"STATUS_ANTES:{statusAntes}"

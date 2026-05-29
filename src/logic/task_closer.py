@@ -231,7 +231,7 @@ def closeTask(apiClient, taskId: str, ticketId: str, resultados: List[Any], csvF
         f"{sucessos}/{total} Itens tratados:<br><br>"
         f"{textoItens}"
         f"<br><br>"
-        f"<small><i>*Mensagem gerada automaticamente via automação (ITXAutoNTI v1.2.0)</i></small><br><br>"
+        f"<small><i>*Mensagem gerada automaticamente via automação (ITXAutoNTI v1.1.0)</i></small><br><br>"
     )
 
     infoTask = createInfoTask(apiClient, int(ticketId), message)

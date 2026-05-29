@@ -1,5 +1,6 @@
 import csv
 import os
+import tempfile
 from datetime import datetime
 from dataclasses import dataclass
 from typing import Dict, Any, List, Optional
@@ -29,7 +30,7 @@ def getStatusELocalItem(apiClient, itemType: str, itemId: str) -> tuple[str, str
         resp = apiClient.get(url, params=params)
         resp.raise_for_status()
     except Exception as e:
-        logger.error(f"⚠️ Erro em getStatusELocalItem: {e}")
+        logger.error(f"Erro em getStatusELocalItem: {e}")
         return f"ERRO", "N/A"
 
     data = resp.json()
@@ -76,7 +77,7 @@ def getLocationIdByCode(apiClient, codigo: str, nome: str) -> str:
     - ID interno da localização
     """
     url = f"/search/Location"
-    tentativas = [codigo, nome]
+    tentativas = [codigo, nome, nome.replace(" - ", " > "), nome.replace("-", " > ")]
     
     for termo in tentativas:
         if not termo: continue
@@ -92,14 +93,32 @@ def getLocationIdByCode(apiClient, codigo: str, nome: str) -> str:
                 resp = apiClient.get(url, params=params)
                 resp.raise_for_status()
                 data = resp.json()
+
                 if data.get("data") and len(data["data"]) > 0:
                     idInterno = str(data["data"][0].get("2"))
                     if idInterno and idInterno != "None":
                         return idInterno
             except Exception as e:
-                logger.warning(f"⚠️ Erro em getLocationIdByCode termo {termo}: {e}")
+                logger.warning(f"Erro em getLocationIdByCode termo {termo}: {e}")
                 continue
-                
+    palavra_chave = nome.split("-")[-1].strip()
+    if palavra_chave:
+        params_sobrevivencia = {
+            "criteria[0][field]": "1",
+            "criteria[0][searchtype]": "contains",
+            "criteria[0][value]": palavra_chave,
+            "forcedisplay[0]": "2"
+        }
+        try:
+            resp = apiClient.get(url, params=params_sobrevivencia)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("data") and len(data["data"]) > 0:
+                    idInterno = str(data["data"][0].get("2"))
+                    if idInterno and idInterno != "None":
+                        return idInterno
+        except Exception:
+            pass
     return None
 
 def getEstadoAtualItem(apiClient, itemType: str, itemId: int) -> str:
@@ -120,7 +139,7 @@ def getEstadoAtualItem(apiClient, itemType: str, itemId: int) -> str:
         resp = apiClient.get(url)
         resp.raise_for_status()
     except Exception as e:
-        logger.error(f"⚠️ Erro ao buscar estado atual: {e}")
+        logger.error(f"Erro ao buscar estado atual: {e}")
         return f"ERRO_GET"
 
     data = resp.json()
@@ -142,10 +161,7 @@ def gerarHistoricoCsv(results: List[Result], chamadoId: str, tarefaId: str) -> s
     O que retorna? 
     - Caminho absoluto na máquina de onde o CSV foi salvo para ser upado.
     """
-    projectRoot = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-    reportsDir = os.path.join(projectRoot, "relatorios")
-    
-    os.makedirs(reportsDir, exist_ok=True)
+    reportsDir = tempfile.gettempdir()
     
     fileName = f"historico_chamado_{chamadoId}_task_{tarefaId}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
     filePath = os.path.join(reportsDir, fileName)
@@ -204,8 +220,6 @@ def gerarHistoricoCsv(results: List[Result], chamadoId: str, tarefaId: str) -> s
                     result.erro or "",
                 ]
             )
-
-    logger.info(f"📜 Histórico salvo: {fileName}")
     return filePath
 
 
@@ -239,7 +253,7 @@ def associarItemAoChamado(apiClient, instruction: Instruction) -> str:
         resp.raise_for_status()
         return f"Assoc:{resp.status_code}"
     except Exception as e:
-        logger.error(f"⚠️ Erro ao associar item: {e}")
+        logger.error(f"Erro ao associar item: {e}")
         return "Assoc:ERRO"
 
 
@@ -264,7 +278,7 @@ def removerItemDoChamado(apiClient, instruction: Instruction) -> str:
         resp = apiClient.get(urlList)
         resp.raise_for_status()
     except Exception as e:
-        logger.error(f"⚠️ Erro Listar vínculos: {e}")
+        logger.error(f"Erro Listar vinculos: {e}")
         return f"List ERRO"
 
     data = resp.json() or []
@@ -286,7 +300,7 @@ def removerItemDoChamado(apiClient, instruction: Instruction) -> str:
         try:
             apiClient.delete(urlDel) 
         except Exception as e:
-            logger.error(f"⚠️ Erro ao remover vínculo: {e}")
+            logger.error(f"Erro ao remover vinculo: {e}")
 
     return f"Removidos {len(vinculos)} vínculos"
 
@@ -308,19 +322,18 @@ def executeFromParsedTask(apiClient, taskInstructions: List[Instruction]) -> tup
 
     sucessos = 0
     total = len(taskInstructions)
-    logger.info(f"⚙️ Iniciando execução de {total} itens no GLPI...")
+    logger.info(f"Iniciando execucao de {total} itens no GLPI...")
 
     for i, instruction in enumerate(taskInstructions, 1):
-        logger.info(f"  ▶ [{i}/{total}] Processando {instruction.patrimonioItem} ({instruction.tipoItem})...")
         result = processSingleAsset(apiClient, instruction)
         results.append(result)
 
         if result.success:
             sucessos += 1
         else:
-            logger.warning(f"⚠️ Falha na instrução: {result.erro}")
+            logger.warning(f"Falha na instrucao: {result.erro}")
 
-    logger.info(f"✨ {sucessos}/{total} itens concluídos com sucesso.")
+    logger.info(f"{sucessos}/{total} itens concluidos com sucesso.")
 
     if results:
         csvFile = gerarHistoricoCsv(
@@ -328,7 +341,6 @@ def executeFromParsedTask(apiClient, taskInstructions: List[Instruction]) -> tup
             results[0].chamadoId,
             results[0].tarefaId,
         )
-        logger.info(f"📊 CSV Gerado: {csvFile}")
         return results, csvFile
 
     return results, None
@@ -390,8 +402,7 @@ def processSingleAsset(apiClient, instruction: Instruction) -> Result:
     FonteAtualizacao = {
         "GLPI Native": 1,
         "FOG Server": 2,
-        "ITXAutoNTI": 3
-    }
+        "ITXAutoNTI": 3}
     '''
     fields: Dict[str, Any] = {}
     fields["id"] = itemId 
@@ -404,8 +415,6 @@ def processSingleAsset(apiClient, instruction: Instruction) -> Result:
         locId = getLocationIdByCode(apiClient, instruction.localFuzzyCodigo, instruction.localFuzzyNome)
         if locId:
             fields["locations_id"] = int(locId)
-        else:
-            logger.warning(f"😞 ID  não encontrado no GLPI para o patrimônio {instruction.localFuzzyCodigo}")
 
     msgUpdate = "Sem alterações"
     msgAssoc = "Sem associação"
@@ -423,8 +432,12 @@ def processSingleAsset(apiClient, instruction: Instruction) -> Result:
         else:
             msgAssoc = f"Ação desconhecida: {instruction.acaoItem}"
 
-        statusDepois, _ = getStatusELocalItem(apiClient, itemType, str(itemId))
-        localDepois = novaLocal or localAntes
+        statusDepois, localApos = getStatusELocalItem(apiClient, itemType, str(itemId))
+
+        if localApos and localApos != "?":
+            localDepois = localApos
+        else:
+            localDepois = instruction.localFuzzyNome or localAntes
 
         lancStatus = (
             f"STATUS_ANTES:{statusAntes}"

@@ -16,14 +16,14 @@ def setupLogger():
     
     os.makedirs(logDir, exist_ok=True)
     
-    logFileName = f"execucao_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+    logFileName = f"execucao_{datetime.now().strftime('%Y%m%d')}.log"
     logPath = os.path.join(logDir, logFileName)
     
     logger = logging.getLogger("ITXAutoNTI")
     logger.setLevel(logging.INFO) 
     
     if not logger.handlers:
-        fileHandler = logging.FileHandler(logPath, encoding='utf-8')
+        fileHandler = logging.FileHandler(logPath, mode='a', encoding='utf-8')
         fileHandler.setLevel(logging.INFO)
         
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')

@@ -227,7 +227,7 @@ def findItemId(apiClient, itemType: str, patrimonioItem: str) -> tuple[str, str]
         data = resp.json()
         resultado = data.get("data", [])
     except Exception as e:
-        logger.error(f"⚠️ Erro ao buscar item {patrimonioItem}: {e}")
+        logger.error(f"Erro ao buscar item {patrimonioItem}: {e}")
         return None
     
     if not resultado:
@@ -261,7 +261,7 @@ def parseTaskInstruction(dadosTarefa: Dict[str, Any], apiClient) -> List[Instruc
 
     content = dadosTarefa.get("content")
     if not content:
-        logger.error(f"🛑 ERRO! Task {tarefaId}: sem content")
+        logger.error(f"ERRO! Task {tarefaId}: sem content")
         return []
     
     try:
@@ -296,7 +296,7 @@ def parseTaskInstruction(dadosTarefa: Dict[str, Any], apiClient) -> List[Instruc
             fuzzyNome = matchLocal["Nome"] if matchLocal else ""
             fuzzyCodigo = matchLocal["Codigo"] if matchLocal else ""
             
-            itemData = findItemId(apiClient, tipoGlpi, equipamentoIdStr)
+            itemData = findItemId(apiClient, tipoGlpi, equipamentoIdStr) 
             
             if not itemData:
                 instructions.append(Instruction(

@@ -42,6 +42,7 @@ O fluxo de processamento é dividido em quatro módulos principais, operando em 
 * ⚡ **Comunicação Direta via API:** Executa todas as operações diretamente na API REST do GLPI (rápido e invisível).
 * 🦡 **Resposta Automática:** Responde automaticamente ao chamado informando o sucesso da operação.
 * 📊 **Histórico e Auditoria:** Anexa automaticamente o arquivo `ITX_Relatorio.csv` com logs detalhados e status das ações.
+* 🎯 **Fuzzy Matching de Localização:** Algoritmo inteligente de IA que corrige e aproxima nomes de locais digitados com erro pelo usuário, baseando-se em um dicionário de dados local e privado da instituição.
 
 ---
 
@@ -78,8 +79,15 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-**4. Configure o ambiente:**
-Crie ou edite o arquivo `.env` na pasta `config/` adicionando suas credenciais da API do GLPI.
+**4. Configure as chaves de segurança e o ambiente:**
+Crie ou edite o arquivo `.env` (ou dentro da pasta `config/`) e adicione **obrigatoriamente** as seguintes credenciais da API do GLPI:
+```env
+GLPI_API_URL="https://caminho-do-seu-glpi/apirest.php"
+GLPI_APP_TOKEN="seu_app_token_gerado_no_glpi"
+GLPI_USER_TOKEN="seu_user_token_gerado_no_glpi"
+```
+> **⚠️ Importante sobre o Fuzzy Matching (Arquivo Privado):** 
+> O motor de correção inteligente de localizações precisa consultar um arquivo chamado `localizacao.csv` alocado na pasta `src/logic/`. Por conter o mapeamento interno da infraestrutura da instituição, **este arquivo é sigiloso e não faz parte do repositório público**. Quem for instalar ou realizar o deploy da aplicação deverá gerar e providenciar essa base em CSV contendo os locais internos para que a engine funcione corretamente.
 
 **5. Inicie a engine:**
 ```bash

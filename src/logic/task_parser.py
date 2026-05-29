@@ -340,7 +340,7 @@ def parseTaskInstruction(dadosTarefa: Dict[str, Any], apiClient) -> List[Instruc
             f"❌ Ocê verificou direito? A tarefa está inválida.<br><br>" 
             f"Confira se a ação foi marcada corretamente ou se esqueceu de inserir os patrimônios na tabela."
             f"<br><br>"
-            f"<small><i>*Mensagem gerada automaticamente via automação (ITXAutoNTI v1.2.0)</i></small><br><br>"
+            f"<small><i>*Mensagem gerada automaticamente via automação (ITXAutoNTI v1.1.0)</i></small><br><br>"
         )
         
         createInfoTask(apiClient, int(chamadoId), message)

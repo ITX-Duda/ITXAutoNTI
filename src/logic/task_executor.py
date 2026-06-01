@@ -398,7 +398,7 @@ def processSingleAsset(apiClient, instruction: Instruction) -> Result:
     if getattr(instruction, "already_done", False):
         lancStatus = (
             f"STATUS_ANTES:{statusAntes}"
-            f"|STATUS_DEPOIS:{statusDepois}"
+            f"|STATUS_DEPOIS:{statusAntes}"
             f"|LOCAL_ANTES:{localAntes}"
             f"|LOCAL_DEPOIS:{localAntes}"
             f"|UPDATE:Sem alterações"

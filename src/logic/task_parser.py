@@ -28,6 +28,7 @@ class Instruction:
     tipoItem: str               
     chamadoId: str              
     tarefaId: str               
+    already_done: bool = False
 
     def __str__(self) -> str:
         return (
@@ -71,6 +72,57 @@ def normalizarNumero(n):
     """
     return str(int(n))
 
+def verificarSeJaProcessado(apiClient, itemType: str, itemId: str, acaoItem: str, chamadoId: str, localDesejadoCodigo: str, localDesejadoNome: str) -> bool:
+    """
+    O que faz?
+
+    Valida se a ação (inserir/remover) já foi realizada para este chamado específico,
+    evitando duplicidade de vínculos na tabela Item_Ticket e operações redundantes.
+    """
+    if not itemId or not chamadoId:
+        return False
+
+    try:
+        # 1. Busca os vínculos atuais deste chamado para saber se o item já está associado a ele
+        urlVinculos = f"/Ticket/{chamadoId}/Item_Ticket"
+        respVinculos = apiClient.get(urlVinculos)
+        respVinculos.raise_for_status()
+        vinculos = respVinculos.json() or []
+        # Varre a lista de vínculos do chamado
+        jaEstaVinculado = any(
+            int(v.get("items_id", 0)) == int(itemId) and v.get("itemtype") == itemType
+            for v in vinculos
+        )
+
+        # 2. Busca o estado atual do ativo no GLPI
+        urlItem = f"/{itemType}/{itemId}"
+        respItem = apiClient.get(urlItem)
+        respItem.raise_for_status()
+        dadosAtuais = respItem.json()
+        localAtualId = str(dadosAtuais.get("locations_id", ""))
+
+        if acaoItem == "inserir":   
+            from src.logic.task_executor import getLocationIdByCode
+            # Converte o código string do Fuzzy para o ID de banco real do GLPI
+            localDesejadoId = getLocationIdByCode(apiClient, localDesejadoCodigo, localDesejadoNome)
+            
+            # Se já está vinculado ao chamado E a localização já está correta, o trabalho está feito
+            
+            if jaEstaVinculado and (localAtualId == str(localDesejadoId) or localDesejadoId == None):
+                return True
+                
+        elif acaoItem == "remover":
+            # Se a ação é remover e o item NÃO está mais vinculado ao chamado, a operação já foi concluída
+            if not jaEstaVinculado:
+                return True
+
+        return False
+
+    except Exception as e:
+        # Bloco unificado de exceção
+        logger.error(f"Erro ao verificar estado de duplicidade/estado atual do item {itemId} no chamado {chamadoId}: {e}")
+        # Por segurança, se a API falhar na checagem, retornamos False para permitir que o sistema tente processar a instrução
+        return False
 
 def extrairCamposTask(textoHtml: str) -> dict:
     """
@@ -312,7 +364,7 @@ def parseTaskInstruction(dadosTarefa: Dict[str, Any], apiClient) -> List[Instruc
             fuzzyNome = matchLocal["Nome"] if matchLocal else ""
             fuzzyCodigo = matchLocal["Codigo"] if matchLocal else ""
             
-            itemData = findItemId(apiClient, tipoGlpi, equipamentoIdStr) 
+            itemData = findItemId(apiClient, tipoGlpi, equipamentoIdStr)
             
             if not itemData:
                 instructions.append(Instruction(
@@ -330,6 +382,38 @@ def parseTaskInstruction(dadosTarefa: Dict[str, Any], apiClient) -> List[Instruc
                 continue
             
             itemId, itemNome = itemData
+            
+            # ==========================================
+            # Validação de Item Duplicado
+            jaFoiProcessado = verificarSeJaProcessado(
+                            apiClient=apiClient,
+                            itemType=tipoGlpi,
+                            itemId=itemId,
+                            acaoItem=acaoItem,
+                            chamadoId=chamadoId,                # Enviando o ID do chamado atual
+                            localDesejadoCodigo=fuzzyCodigo,    # Código vindo do Fuzzy
+                            localDesejadoNome=fuzzyNome         # Nome vindo do Fuzzy
+                        )
+
+            if jaFoiProcessado:
+                logger.info(
+                    f"Patrimônio {itemNome} ({itemId}) já processado: "
+                    f"A ação '{acaoItem}' já se encontra aplicada para o chamado #{chamadoId} no GLPI."
+                )
+                instructions.append(Instruction(
+                    itemId=itemId,
+                    patrimonioItem=itemNome,
+                    chamadoId=chamadoId,
+                    tarefaId=tarefaId,
+                    acaoItem=acaoItem,
+                    localItem=localItem or "",
+                    localFuzzyNome=fuzzyNome,
+                    localFuzzyCodigo=fuzzyCodigo,
+                    statusItem=statusAtivo or "",
+                    tipoItem=tipoGlpi,
+                    already_done=True
+                ))
+                continue
 
             instructions.append(Instruction(
                 itemId=itemId,
@@ -342,6 +426,7 @@ def parseTaskInstruction(dadosTarefa: Dict[str, Any], apiClient) -> List[Instruc
                 localFuzzyCodigo=fuzzyCodigo,
                 statusItem=statusAtivo or "",
                 tipoItem=tipoGlpi,
+                already_done=False
             ))
     
     return instructions

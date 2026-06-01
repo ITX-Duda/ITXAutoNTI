@@ -55,6 +55,7 @@ class Result:
     lancStatusamento: str  
     action: str
     erro: Optional[str] = None
+    already_done: bool = False
 
     def __str__(self) -> str:
         return (
@@ -239,6 +240,17 @@ def associarItemAoChamado(apiClient, instruction: Instruction) -> str:
     itemId = int(instruction.itemId)
     itemTypeStr = instruction.tipoItem
 
+    urlList = f"/Ticket/{ticketId}/Item_Ticket"
+    try:
+        resp = apiClient.get(urlList)
+        if resp.status_code == 200:
+            data = resp.json() or []
+            for r in data:
+                if int(r.get("items_id", 0)) == itemId and r.get("itemtype") == itemTypeStr:
+                    return "Já associado anteriormente"
+    except Exception as e:
+        logger.warning(f"Não foi possível checar vínculos prévios: {e}")
+
     url = f"/Item_Ticket"
     payload = {
         "input": {
@@ -290,7 +302,7 @@ def removerItemDoChamado(apiClient, instruction: Instruction) -> str:
     ]
 
     if not vinculos:
-        return "Nenhum vínculo encontrado para remover"
+        return "Já estava removido"
 
     for v in vinculos:
         vincId = v.get("id")
@@ -383,6 +395,27 @@ def processSingleAsset(apiClient, instruction: Instruction) -> Result:
 
     statusAntes, localAntes = getStatusELocalItem(apiClient, itemType, str(itemId))
 
+    if getattr(instruction, "already_done", False):
+        lancStatus = (
+            f"STATUS_ANTES:{statusAntes}"
+            f"|STATUS_DEPOIS:{statusAntes}"
+            f"|LOCAL_ANTES:{localAntes}"
+            f"|LOCAL_DEPOIS:{localAntes}"
+            f"|UPDATE:Sem alterações"
+            f"|ASSOC:Já estava {'associado' if action == 'inserir' else 'removido'}"
+        )
+        return Result(
+            success=True,
+            patrimonio=patrimonio,
+            itemId=str(itemId),
+            chamadoId=ticketId,
+            tarefaId=tarefaId,
+            tipoItem=itemType,
+            lancStatusamento=lancStatus,
+            action=action,
+            already_done=True,
+        )
+
     mapStatus = {
         "ativo": 7,
         "desfeito": 13,
@@ -428,12 +461,20 @@ def processSingleAsset(apiClient, instruction: Instruction) -> Result:
             rUpdate = apiClient.put(itemUrl, json={"input": fields})
             msgUpdate = f"Upd:{rUpdate.status_code}"
 
+        is_already_done = False
         if action == "inserir":
             msgAssoc = associarItemAoChamado(apiClient, instruction)
+            if msgAssoc == "Já associado anteriormente":
+                is_already_done = True
         elif action == "remover":
             msgAssoc = removerItemDoChamado(apiClient, instruction)
+            if msgAssoc == "Já estava removido":
+                is_already_done = True
         else:
             msgAssoc = f"Ação desconhecida: {instruction.acaoItem}"
+
+        # Se não teve Update de status/local E a associação já estava feita, a tarefa estava totalmente pronta
+        is_already_done = is_already_done and (msgUpdate == "Sem alterações")
 
         statusDepois, localApos = getStatusELocalItem(apiClient, itemType, str(itemId))
 
@@ -460,6 +501,7 @@ def processSingleAsset(apiClient, instruction: Instruction) -> Result:
             tipoItem=itemType,
             lancStatusamento=lancStatus,
             action=action,
+            already_done=is_already_done,
         )
 
     except Exception as e:

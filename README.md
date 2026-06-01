@@ -138,7 +138,7 @@ Este projeto é fruto da pesquisa, dedicação e genialidade de uma equipe focad
 ## ⚖️ Propriedade Intelectual e Licenciamento
 
 **Registro de Propriedade Intelectual:**
-O código-fonte, arquitetura, design e lógica do sistema **ITXAutoNTI** constituem patrimônio intelectual desenvolvido pela equipe supracitada. Este repositório reflete a versão oficial `v1.0.0` para fins de registro formal e documentação de autoria.
+O código-fonte, arquitetura, design e lógica do sistema **ITXAutoNTI** constituem patrimônio intelectual desenvolvido pela equipe supracitada. Este repositório reflete a versão oficial `v1.1.0` para fins de registro formal e documentação de autoria.
 
 **Aviso de Direitos:**
 © 2026 Equipe ITXAutoNTI. 

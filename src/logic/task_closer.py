@@ -216,11 +216,16 @@ def closeTask(apiClient, taskId: str, ticketId: str, resultados: List[Any], csvF
         if localAntes == localDepois or localDepois == "?":
             localDepois = "Não alterado"
         
+        already_done = getattr(r, "already_done", False) or (isinstance(r, dict) and r.get("already_done", False))
+        
         if isSuccess:
-            linhasItens.append(f"✅ {pat} foi {acaoPassado} >> 📊 Status: {statusDepois} >> 📍 Localização: {localDepois}")
+            if already_done:
+                linhasItens.append(f"✅ {pat} já estava {acaoPassado} >> 📊 Status: {statusDepois} >> 📍 Localização: {localDepois}")
+            else:
+                linhasItens.append(f"✅ {pat} foi {acaoPassado} >> 📊 Status: {statusDepois} >> 📍 Localização: {localDepois}")
         else:
             msgErro = erro if erro else "⚠️ Erro desconhecido"
-            linhasItens.append(f"❌ {pat} não foi {acaoPassado}.{msgErro}")
+            linhasItens.append(f"❌ {pat} não foi {acaoPassado}. {msgErro}")
 
     textoItens = "<br>".join(linhasItens)
 

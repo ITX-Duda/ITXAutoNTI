@@ -37,3 +37,4 @@ docs/
 # Scripts de debug e outros específicos
 scripts/debug_fields.py
 scripts/release.py
+scripts/deleta_release.py

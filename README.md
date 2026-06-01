@@ -4,7 +4,7 @@
 **Automação Inteligente de Tarefas no GLPI**
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Release-v1.2.0-success?style=for-the-badge&logo=rocket" alt="Status" />
+  <img src="https://img.shields.io/badge/Release-v1.1.0-success?style=for-the-badge&logo=rocket" alt="Status" />
   <img src="https://img.shields.io/badge/license-MIT-blue?style=for-the-badge&logo=mit" alt="License" />
   <img src="https://img.shields.io/badge/Python-3.8%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
 </p>

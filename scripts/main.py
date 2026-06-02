@@ -28,7 +28,7 @@ def main():
     - 1 para falha de execução
     """
     logger.info("Iniciando operacao.")
-    logger.info("ITXAutoNTI v1.2.0")
+    logger.info("ITXAutoNTI v1.1.0")
     logger.info("Conectando ao GLPI")
     
     if not chaves:

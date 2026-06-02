@@ -16,7 +16,7 @@ def setupLogger():
     
     os.makedirs(logDir, exist_ok=True)
     
-    logFileName = f"execucao_{datetime.now().strftime('%Y%m%d')}.log"
+    logFileName = f"ITXExecucao.log"
     logPath = os.path.join(logDir, logFileName)
     
     logger = logging.getLogger("ITXAutoNTI")

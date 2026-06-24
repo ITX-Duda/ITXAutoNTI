@@ -96,6 +96,18 @@ python main.py
 
 ---
 
+## 📄 Publicação Científica
+
+Este projeto foi apresentado no **WTIFICES 2026** (Workshop de Trabalhos de Iniciação em Computação e Sistemas) e documentado no seguinte artigo científico:
+
+> **Automação e Otimização de Processos de TI na UFABC: O Desenvolvimento e Implementação do ITXAutoNTI**
+> M. E. A. B. Brito, E. F. Lima, B. B. Bianchi, P. H. de Lima Franca, F. D. C. Iglesias
+> *Workshop de Trabalhos de Iniciação em Computação e Sistemas (WTIFICES), CSBC 2026*
+
+📎 [Artigo completo (PDF)](./Artigo_WTIFICES_ITXAutoNTI.pdf)
+
+---
+
 ## 👨‍💻 Autores e Inventores
 
 Este projeto é fruto da pesquisa, dedicação e genialidade de uma equipe focada em otimização. Um grande *salve* para os criadores do **ITXAutoNTI**:

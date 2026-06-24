@@ -40,7 +40,7 @@ def getTaskAuthorMention(apiClient, taskId: int) -> str:
         return f'<a class="user-mention" href="/front/user.form.php?id={usersId}">@{nomeCompleto}</a>'
             
     except Exception as e:
-        logger.warning(f"📢❗Não foi possível buscar o criador da task {taskId}: {e}")
+        logger.warning(f"Nao foi possivel buscar o criador da task {taskId}: {e}")
         return ""
 
 def markTaskDone(apiClient, taskId: int) -> Dict[str, Any]:
@@ -61,10 +61,9 @@ def markTaskDone(apiClient, taskId: int) -> Dict[str, Any]:
             json={"input": {"state": 2}},
         )
         response.raise_for_status()
-        logger.info(f"✅ Task #{taskId} concluída (Fechada)")
         return {"success": True}
     except Exception as e:
-        logger.error(f"🚨 Erro ao fechar task {taskId}: {e}")
+        logger.error(f"Erro ao fechar task {taskId}: {e}")
         return {"success": False, "error": str(e)}
 
 def createInfoTask(apiClient, ticketId: int, message: str) -> Dict[str, Any]:
@@ -94,10 +93,9 @@ def createInfoTask(apiClient, ticketId: int, message: str) -> Dict[str, Any]:
         )
         response.raise_for_status()
         newTaskId = response.json().get("id")
-        logger.info(f"📝 Nova task de informação criada (ID: {newTaskId})")
         return {"success": True, "newTaskId": newTaskId}
     except Exception as e:
-        logger.error(f"🚨 Erro ao criar task de informação: {e}")
+        logger.error(f"Erro ao criar task de informacao: {e}")
         return {"success": False, "error": str(e)}
 
 def uploadDocument(apiClient, itemType: str, itemsId: int, filePath: str) -> Dict[str, Any]:
@@ -149,7 +147,7 @@ def uploadDocument(apiClient, itemType: str, itemsId: int, filePath: str) -> Dic
             docId = response.json().get("id", "unknown")
             return {"success": True, "docId": docId}
     except Exception as e:
-        logger.error(f"🚨 Erro ao enviar anexo: {e}")
+        logger.error(f"Erro ao enviar anexo: {e}")
         return {"success": False, "error": str(e)}
 
 
@@ -218,11 +216,16 @@ def closeTask(apiClient, taskId: str, ticketId: str, resultados: List[Any], csvF
         if localAntes == localDepois or localDepois == "?":
             localDepois = "Não alterado"
         
+        already_done = getattr(r, "already_done", False) or (isinstance(r, dict) and r.get("already_done", False))
+        
         if isSuccess:
-            linhasItens.append(f"✅ {pat} foi {acaoPassado} >> 📊 Status: {statusDepois} >> 📍 Localização: {localDepois}")
+            if already_done:
+                linhasItens.append(f"✅ {pat} já estava {acaoPassado} >> 📊 Status: {statusDepois} >> 📍 Localização: {localDepois}")
+            else:
+                linhasItens.append(f"✅ {pat} foi {acaoPassado} >> 📊 Status: {statusDepois} >> 📍 Localização: {localDepois}")
         else:
             msgErro = erro if erro else "⚠️ Erro desconhecido"
-            linhasItens.append(f"❌ {pat} não foi {acaoPassado}.{msgErro}")
+            linhasItens.append(f"❌ {pat} não foi {acaoPassado}. {msgErro}")
 
     textoItens = "<br>".join(linhasItens)
 
@@ -233,7 +236,7 @@ def closeTask(apiClient, taskId: str, ticketId: str, resultados: List[Any], csvF
         f"{sucessos}/{total} Itens tratados:<br><br>"
         f"{textoItens}"
         f"<br><br>"
-        f"<small><i>*Mensagem gerada automaticamente via automação</i></small><br><br>"
+        f"<small><i>*Mensagem gerada automaticamente via automação (ITXAutoNTI v1.1.0)</i></small><br><br>"
     )
 
     infoTask = createInfoTask(apiClient, int(ticketId), message)
@@ -249,10 +252,8 @@ def closeTask(apiClient, taskId: str, ticketId: str, resultados: List[Any], csvF
             filePath=csvFile
         )
         
-        if docUpload.get("success"):
-            logger.info("🔗 CSV anexado.")
-        else:
-            logger.error(f"⚠️ Erro! Falha no anexo: {docUpload.get('error')}")
+        if docUpload.get("error"):
+            logger.error(f"Erro ao subir anexo: {docUpload['error']}")
 
     return {
         "success": infoTask.get("success", False),

@@ -4,7 +4,7 @@
 **Automação Inteligente de Tarefas no GLPI**
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Release-v1.0.0-success?style=for-the-badge&logo=rocket" alt="Status" />
+  <img src="https://img.shields.io/badge/Release-v1.1.0-success?style=for-the-badge&logo=rocket" alt="Status" />
   <img src="https://img.shields.io/badge/license-MIT-blue?style=for-the-badge&logo=mit" alt="License" />
   <img src="https://img.shields.io/badge/Python-3.8%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
 </p>
@@ -42,6 +42,7 @@ O fluxo de processamento é dividido em quatro módulos principais, operando em 
 * ⚡ **Comunicação Direta via API:** Executa todas as operações diretamente na API REST do GLPI (rápido e invisível).
 * 🦡 **Resposta Automática:** Responde automaticamente ao chamado informando o sucesso da operação.
 * 📊 **Histórico e Auditoria:** Anexa automaticamente o arquivo `ITX_Relatorio.csv` com logs detalhados e status das ações.
+* 🎯 **Fuzzy Matching de Localização:** Algoritmo inteligente de IA que corrige e aproxima nomes de locais digitados com erro pelo usuário, baseando-se em um dicionário de dados local e privado da instituição.
 
 ---
 
@@ -78,13 +79,32 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-**4. Configure o ambiente:**
-Crie ou edite o arquivo `.env` na pasta `config/` adicionando suas credenciais da API do GLPI.
+**4. Configure as chaves de segurança e o ambiente:**
+Crie ou edite o arquivo `.env` (ou dentro da pasta `config/`) e adicione **obrigatoriamente** as seguintes credenciais da API do GLPI:
+```env
+GLPI_API_URL="https://caminho-do-seu-glpi/apirest.php"
+GLPI_APP_TOKEN="seu_app_token_gerado_no_glpi"
+GLPI_USER_TOKEN="seu_user_token_gerado_no_glpi"
+```
+> **⚠️ Importante sobre o Fuzzy Matching (Arquivo Privado):** 
+> O motor de correção inteligente de localizações precisa consultar um arquivo chamado `localizacao.csv` alocado na pasta `src/logic/`. Por conter o mapeamento interno da infraestrutura da instituição, **este arquivo é sigiloso e não faz parte do repositório público**. Quem for instalar ou realizar o deploy da aplicação deverá gerar e providenciar essa base em CSV contendo os locais internos para que a engine funcione corretamente.
 
 **5. Inicie a engine:**
 ```bash
 python main.py
 ```
+
+---
+
+## 📄 Publicação Científica
+
+Este projeto foi apresentado no **WTIFICES 2026** (Workshop de Trabalhos de Iniciação em Computação e Sistemas) e documentado no seguinte artigo científico:
+
+> **Automação e Otimização de Processos de TI na UFABC: O Desenvolvimento e Implementação do ITXAutoNTI**
+> M. E. A. B. Brito, E. F. Lima, B. B. Bianchi, P. H. de Lima Franca, F. D. C. Iglesias
+> *Workshop de Trabalhos de Iniciação em Computação e Sistemas (WTIFICES), CSBC 2026*
+
+📎 [Artigo completo (PDF)](./Artigo_WTIFICES_ITXAutoNTI.pdf)
 
 ---
 
@@ -130,7 +150,7 @@ Este projeto é fruto da pesquisa, dedicação e genialidade de uma equipe focad
 ## ⚖️ Propriedade Intelectual e Licenciamento
 
 **Registro de Propriedade Intelectual:**
-O código-fonte, arquitetura, design e lógica do sistema **ITXAutoNTI** constituem patrimônio intelectual desenvolvido pela equipe supracitada. Este repositório reflete a versão oficial `v1.0.0` para fins de registro formal e documentação de autoria.
+O código-fonte, arquitetura, design e lógica do sistema **ITXAutoNTI** constituem patrimônio intelectual desenvolvido pela equipe supracitada. Este repositório reflete a versão oficial `v1.1.0` para fins de registro formal e documentação de autoria.
 
 **Aviso de Direitos:**
 © 2026 Equipe ITXAutoNTI. 

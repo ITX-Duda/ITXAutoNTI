@@ -47,14 +47,39 @@ def getItxTasks(apiClient) -> List[Dict]:
         "criteria[3][value]": "itxautonti",
     }
 
-    try:
-        resp = apiClient.get(urlPesquisa, params=parametrosPesquisa)
-        resp.raise_for_status()
-        data = resp.json()
-        tickets = data.get("data", [])
-    except Exception as e:
-        logger.error(f"Erro ao buscar chamados: {e}")
-        return []
+    tickets = []
+    ticketsBegin = 0
+    ticketsLimit = 50
+
+    while True:
+        ticketsEnd = ticketsBegin + ticketsLimit - 1
+        parametrosPesquisa["range"] = f"{ticketsBegin}-{ticketsEnd}"
+
+        try:
+            resp = apiClient.get(urlPesquisa, params=parametrosPesquisa)
+            resp.raise_for_status()
+
+            data = resp.json()
+            ticketsPage = data.get("data", []) if data else []
+            
+            if not ticketsPage:
+                break
+
+            tickets.extend(ticketsPage)
+            contentRange = resp.headers.get("Content-Range", "")
+            
+            if contentRange:
+                totalMatch = int(contentRange.split("/")[-1])
+                if len(tickets) >= totalMatch:
+                    break
+            else:
+                break
+        
+        except Exception as e:
+                logger.error(f"Erro ao buscar chamados: {e}")
+                return None
+
+        ticketsBegin += ticketsLimit
 
     statusMap = {
         "1": "Aberto",
@@ -81,13 +106,36 @@ def getItxTasks(apiClient) -> List[Dict]:
         ticketStatusName = statusMap.get(str(ticketStatusId), "Desconhecido")
 
         taskUrl = f"/Ticket/{ticketId}/TicketTask"
-        try:
-            taskResponse = apiClient.get(taskUrl)
-            taskResponse.raise_for_status()
-            tasks = taskResponse.json() or []
-        except Exception as e:
-            logger.error(f"Erro ao buscar tasks do chamado {ticketId}: {e}")
-            continue
+        tasks = []
+        tasksBegin = 0
+        tasksLimit = 50
+        
+        while True:
+            tasksEnd = tasksBegin + tasksLimit - 1
+            parametrosTasks = {"range": f"{tasksBegin}-{tasksEnd}"}
+
+            try:
+                taskResponse = apiClient.get(taskUrl, params=parametrosTasks)
+                taskResponse.raise_for_status()
+                tasksPage = taskResponse.json() or []
+                
+                if not tasksPage:
+                    break
+
+                tasks.extend(tasksPage)
+                contentRange = taskResponse.headers.get("Content-Range", "")
+                if contentRange:
+                    totalMatch = int(contentRange.split("/")[-1])
+                    if len(tasks) >= totalMatch:
+                        break
+                else:
+                    break
+
+            except Exception as e:
+                logger.error(f"Erro ao buscar tasks do chamado {ticketId}: {e}")
+                break
+
+            tasksBegin += tasksLimit
 
         hasItxTask = False
 

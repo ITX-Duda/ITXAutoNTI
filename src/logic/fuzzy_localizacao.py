@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-from fuzzywuzzy import fuzz, process
+from rapidfuzz import fuzz, process, utils
 
 SCORE_CUTOFF = 85
 
@@ -30,6 +30,7 @@ def getLocalizacaoFuzzy(LocalizacaoInput):
         str(LocalizacaoInput), 
         df["Nome"].tolist(), 
         scorer=fuzz.token_set_ratio, 
+        processor=utils.default_process,
         score_cutoff=SCORE_CUTOFF
     )
 

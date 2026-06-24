@@ -1,5 +1,6 @@
 import csv
 import os
+import tempfile
 from datetime import datetime
 from dataclasses import dataclass
 from typing import Dict, Any, List, Optional
@@ -29,7 +30,7 @@ def getStatusELocalItem(apiClient, itemType: str, itemId: str) -> tuple[str, str
         resp = apiClient.get(url, params=params)
         resp.raise_for_status()
     except Exception as e:
-        logger.error(f"⚠️ Erro em getStatusELocalItem: {e}")
+        logger.error(f"Erro em getStatusELocalItem: {e}")
         return f"ERRO", "N/A"
 
     data = resp.json()
@@ -54,6 +55,7 @@ class Result:
     lancStatusamento: str  
     action: str
     erro: Optional[str] = None
+    already_done: bool = False
 
     def __str__(self) -> str:
         return (
@@ -76,7 +78,7 @@ def getLocationIdByCode(apiClient, codigo: str, nome: str) -> str:
     - ID interno da localização
     """
     url = f"/search/Location"
-    tentativas = [codigo, nome]
+    tentativas = [codigo, nome, nome.replace(" - ", " > "), nome.replace("-", " > ")]
     
     for termo in tentativas:
         if not termo: continue
@@ -92,14 +94,32 @@ def getLocationIdByCode(apiClient, codigo: str, nome: str) -> str:
                 resp = apiClient.get(url, params=params)
                 resp.raise_for_status()
                 data = resp.json()
+
                 if data.get("data") and len(data["data"]) > 0:
                     idInterno = str(data["data"][0].get("2"))
                     if idInterno and idInterno != "None":
                         return idInterno
             except Exception as e:
-                logger.warning(f"⚠️ Erro em getLocationIdByCode termo {termo}: {e}")
+                logger.warning(f"Erro em getLocationIdByCode termo {termo}: {e}")
                 continue
-                
+    palavra_chave = nome.split("-")[-1].strip()
+    if palavra_chave:
+        params_sobrevivencia = {
+            "criteria[0][field]": "1",
+            "criteria[0][searchtype]": "contains",
+            "criteria[0][value]": palavra_chave,
+            "forcedisplay[0]": "2"
+        }
+        try:
+            resp = apiClient.get(url, params=params_sobrevivencia)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("data") and len(data["data"]) > 0:
+                    idInterno = str(data["data"][0].get("2"))
+                    if idInterno and idInterno != "None":
+                        return idInterno
+        except Exception:
+            pass
     return None
 
 def getEstadoAtualItem(apiClient, itemType: str, itemId: int) -> str:
@@ -120,7 +140,7 @@ def getEstadoAtualItem(apiClient, itemType: str, itemId: int) -> str:
         resp = apiClient.get(url)
         resp.raise_for_status()
     except Exception as e:
-        logger.error(f"⚠️ Erro ao buscar estado atual: {e}")
+        logger.error(f"Erro ao buscar estado atual: {e}")
         return f"ERRO_GET"
 
     data = resp.json()
@@ -142,10 +162,7 @@ def gerarHistoricoCsv(results: List[Result], chamadoId: str, tarefaId: str) -> s
     O que retorna? 
     - Caminho absoluto na máquina de onde o CSV foi salvo para ser upado.
     """
-    projectRoot = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-    reportsDir = os.path.join(projectRoot, "relatorios")
-    
-    os.makedirs(reportsDir, exist_ok=True)
+    reportsDir = tempfile.gettempdir()
     
     fileName = f"historico_chamado_{chamadoId}_task_{tarefaId}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
     filePath = os.path.join(reportsDir, fileName)
@@ -204,8 +221,6 @@ def gerarHistoricoCsv(results: List[Result], chamadoId: str, tarefaId: str) -> s
                     result.erro or "",
                 ]
             )
-
-    logger.info(f"📜 Histórico salvo: {fileName}")
     return filePath
 
 
@@ -225,6 +240,17 @@ def associarItemAoChamado(apiClient, instruction: Instruction) -> str:
     itemId = int(instruction.itemId)
     itemTypeStr = instruction.tipoItem
 
+    urlList = f"/Ticket/{ticketId}/Item_Ticket"
+    try:
+        resp = apiClient.get(urlList)
+        if resp.status_code == 200:
+            data = resp.json() or []
+            for r in data:
+                if int(r.get("items_id", 0)) == itemId and r.get("itemtype") == itemTypeStr:
+                    return "Já associado anteriormente"
+    except Exception as e:
+        logger.warning(f"Não foi possível checar vínculos prévios: {e}")
+
     url = f"/Item_Ticket"
     payload = {
         "input": {
@@ -239,7 +265,7 @@ def associarItemAoChamado(apiClient, instruction: Instruction) -> str:
         resp.raise_for_status()
         return f"Assoc:{resp.status_code}"
     except Exception as e:
-        logger.error(f"⚠️ Erro ao associar item: {e}")
+        logger.error(f"Erro ao associar item: {e}")
         return "Assoc:ERRO"
 
 
@@ -264,7 +290,7 @@ def removerItemDoChamado(apiClient, instruction: Instruction) -> str:
         resp = apiClient.get(urlList)
         resp.raise_for_status()
     except Exception as e:
-        logger.error(f"⚠️ Erro Listar vínculos: {e}")
+        logger.error(f"Erro Listar vinculos: {e}")
         return f"List ERRO"
 
     data = resp.json() or []
@@ -276,7 +302,7 @@ def removerItemDoChamado(apiClient, instruction: Instruction) -> str:
     ]
 
     if not vinculos:
-        return "Nenhum vínculo encontrado para remover"
+        return "Já estava removido"
 
     for v in vinculos:
         vincId = v.get("id")
@@ -286,7 +312,7 @@ def removerItemDoChamado(apiClient, instruction: Instruction) -> str:
         try:
             apiClient.delete(urlDel) 
         except Exception as e:
-            logger.error(f"⚠️ Erro ao remover vínculo: {e}")
+            logger.error(f"Erro ao remover vinculo: {e}")
 
     return f"Removidos {len(vinculos)} vínculos"
 
@@ -308,19 +334,18 @@ def executeFromParsedTask(apiClient, taskInstructions: List[Instruction]) -> tup
 
     sucessos = 0
     total = len(taskInstructions)
-    logger.info(f"⚙️ Iniciando execução de {total} itens no GLPI...")
+    logger.info(f"Iniciando execucao de {total} itens no GLPI...")
 
     for i, instruction in enumerate(taskInstructions, 1):
-        logger.info(f"  ▶ [{i}/{total}] Processando {instruction.patrimonioItem} ({instruction.tipoItem})...")
         result = processSingleAsset(apiClient, instruction)
         results.append(result)
 
         if result.success:
             sucessos += 1
         else:
-            logger.warning(f"⚠️ Falha na instrução: {result.erro}")
+            logger.warning(f"Falha na instrucao: {result.erro}")
 
-    logger.info(f"✨ {sucessos}/{total} itens concluídos com sucesso.")
+    logger.info(f"{sucessos}/{total} itens concluidos com sucesso.")
 
     if results:
         csvFile = gerarHistoricoCsv(
@@ -328,7 +353,6 @@ def executeFromParsedTask(apiClient, taskInstructions: List[Instruction]) -> tup
             results[0].chamadoId,
             results[0].tarefaId,
         )
-        logger.info(f"📊 CSV Gerado: {csvFile}")
         return results, csvFile
 
     return results, None
@@ -371,6 +395,27 @@ def processSingleAsset(apiClient, instruction: Instruction) -> Result:
 
     statusAntes, localAntes = getStatusELocalItem(apiClient, itemType, str(itemId))
 
+    if getattr(instruction, "already_done", False):
+        lancStatus = (
+            f"STATUS_ANTES:{statusAntes}"
+            f"|STATUS_DEPOIS:{statusAntes}"
+            f"|LOCAL_ANTES:{localAntes}"
+            f"|LOCAL_DEPOIS:{localAntes}"
+            f"|UPDATE:Sem alterações"
+            f"|ASSOC:Já estava {'associado' if action == 'inserir' else 'removido'}"
+        )
+        return Result(
+            success=True,
+            patrimonio=patrimonio,
+            itemId=str(itemId),
+            chamadoId=ticketId,
+            tarefaId=tarefaId,
+            tipoItem=itemType,
+            lancStatusamento=lancStatus,
+            action=action,
+            already_done=True,
+        )
+
     mapStatus = {
         "ativo": 7,
         "desfeito": 13,
@@ -386,16 +431,18 @@ def processSingleAsset(apiClient, instruction: Instruction) -> Result:
         "manutencao": 3,
     }
     realStatus = mapStatus.get(textoStatus)
-    '''
+    
     FonteAtualizacao = {
-        "GLPI Native": 1,
+        "GLPI Native Inventory": 1,
         "FOG Server": 2,
         "ITXAutoNTI": 3
     }
-    '''
+    
+    tagAtualizacao = FonteAtualizacao.get("ITXAutoNTI")
+
     fields: Dict[str, Any] = {}
     fields["id"] = itemId 
-    fields['autoupdatesystems_id'] = 3
+    fields['autoupdatesystems_id'] = tagAtualizacao
 
     if realStatus is not None:
         fields["states_id"] = realStatus
@@ -404,8 +451,6 @@ def processSingleAsset(apiClient, instruction: Instruction) -> Result:
         locId = getLocationIdByCode(apiClient, instruction.localFuzzyCodigo, instruction.localFuzzyNome)
         if locId:
             fields["locations_id"] = int(locId)
-        else:
-            logger.warning(f"😞 ID  não encontrado no GLPI para o patrimônio {instruction.localFuzzyCodigo}")
 
     msgUpdate = "Sem alterações"
     msgAssoc = "Sem associação"
@@ -416,15 +461,27 @@ def processSingleAsset(apiClient, instruction: Instruction) -> Result:
             rUpdate = apiClient.put(itemUrl, json={"input": fields})
             msgUpdate = f"Upd:{rUpdate.status_code}"
 
+        is_already_done = False
         if action == "inserir":
             msgAssoc = associarItemAoChamado(apiClient, instruction)
+            if msgAssoc == "Já associado anteriormente":
+                is_already_done = True
         elif action == "remover":
             msgAssoc = removerItemDoChamado(apiClient, instruction)
+            if msgAssoc == "Já estava removido":
+                is_already_done = True
         else:
             msgAssoc = f"Ação desconhecida: {instruction.acaoItem}"
 
-        statusDepois, _ = getStatusELocalItem(apiClient, itemType, str(itemId))
-        localDepois = novaLocal or localAntes
+        # Se não teve Update de status/local E a associação já estava feita, a tarefa estava totalmente pronta
+        is_already_done = is_already_done and (msgUpdate == "Sem alterações")
+
+        statusDepois, localApos = getStatusELocalItem(apiClient, itemType, str(itemId))
+
+        if localApos and localApos != "?":
+            localDepois = localApos
+        else:
+            localDepois = instruction.localFuzzyNome or localAntes
 
         lancStatus = (
             f"STATUS_ANTES:{statusAntes}"
@@ -444,6 +501,7 @@ def processSingleAsset(apiClient, instruction: Instruction) -> Result:
             tipoItem=itemType,
             lancStatusamento=lancStatus,
             action=action,
+            already_done=is_already_done,
         )
 
     except Exception as e:

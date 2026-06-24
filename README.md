@@ -1,116 +1,121 @@
 <div align="center">
 
 # 🤖 ITXAutoNTI
-**Automação Inteligente de Tarefas no GLPI**
+**Intelligent Task Automation for GLPI**
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Release-v1.1.0-success?style=for-the-badge&logo=rocket" alt="Status" />
+  <img src="https://img.shields.io/badge/Release-v1.1.0-success?style=for-the-badge&logo=rocket" alt="Release" />
   <img src="https://img.shields.io/badge/license-MIT-blue?style=for-the-badge&logo=mit" alt="License" />
   <img src="https://img.shields.io/badge/Python-3.8%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
 </p>
 
-> *Transformando horas de trabalho manual em milissegundos de eficiência com RPA e integrações via API.*
+<p align="center">
+  <a href="./README.pt-br.md"><img src="https://img.shields.io/badge/🇧🇷_Português-grey?style=flat-square" alt="Português"/></a>
+  <a href="./README.fr.md"><img src="https://img.shields.io/badge/🇫🇷_Français-grey?style=flat-square" alt="Français"/></a>
+</p>
+
+> *Turning hours of manual work into milliseconds of efficiency with RPA and API integrations.*
 
 </div>
 
 ---
 
-## 📖 Visão Geral
+## 📖 Overview
 
-O **ITXAutoNTI** é um robô de automação desenhado para interagir nativamente com o GLPI. Ele é capaz de ler instruções, interpretar lógicas complexas e executar ações automatizadas na plataforma, como a associação em lote de múltiplos patrimônios a um chamado ou encerramento inteligente de tarefas.
+**ITXAutoNTI** is an automation robot designed to interact natively with GLPI. It reads instructions, interprets complex logic, and executes automated actions on the platform — such as batch-linking multiple assets to a ticket or intelligently closing tasks.
+
+Originally developed at the **NTI (Information Technology Center) of UFABC** (Federal University of ABC, Brazil), the tool is built to be replicable by any Federal Higher Education Institution (IFES) or organization running GLPI.
 
 ---
 
-## 🧠 Arquitetura do Sistema
+## 🧠 System Architecture
 
-O fluxo de processamento é dividido em quatro módulos principais, operando em esteira:
+The processing pipeline is divided into four independent modules running in sequence:
 
 <div align="center">
 
-| <img src="https://img.icons8.com/neon/96/code-fork.png" width="48px" alt="Módulo 1"><br>1. Retriever | ➡️ | <img src="https://img.icons8.com/neon/96/brain.png" width="48px" alt="Módulo 2"><br>2. Parser | ➡️ | <img src="https://img.icons8.com/neon/96/api.png" width="48px" alt="Módulo 3"><br>3. Executor | ➡️ | <img src="https://img.icons8.com/neon/96/checked.png" width="48px" alt="Módulo 4"><br>4. Closer |
+| <img src="https://img.icons8.com/neon/96/code-fork.png" width="48px" alt="Module 1"><br>1. Retriever | ➡️ | <img src="https://img.icons8.com/neon/96/brain.png" width="48px" alt="Module 2"><br>2. Parser | ➡️ | <img src="https://img.icons8.com/neon/96/api.png" width="48px" alt="Module 3"><br>3. Executor | ➡️ | <img src="https://img.icons8.com/neon/96/checked.png" width="48px" alt="Module 4"><br>4. Closer |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Busca** tarefas ativas | | **Interpreta** a lógica | | **Executa** via API | | **Finaliza** e loga |
+| **Fetches** active tasks | | **Parses** the logic | | **Executes** via API | | **Closes** and logs |
 
 </div>
 
 ---
 
-## ✨ Funcionalidades Principais
+## ✨ Key Features
 
-* 📚 **Leitura Inteligente:** O robô lê e entende a tarefa exatamente como o analista a escreveu.
-* 📦 **Execução em Lote:** Capacidade de associar múltiplos patrimônios ao chamado de forma simultânea.
-* ⚡ **Comunicação Direta via API:** Executa todas as operações diretamente na API REST do GLPI (rápido e invisível).
-* 🦡 **Resposta Automática:** Responde automaticamente ao chamado informando o sucesso da operação.
-* 📊 **Histórico e Auditoria:** Anexa automaticamente o arquivo `ITX_Relatorio.csv` com logs detalhados e status das ações.
-* 🎯 **Fuzzy Matching de Localização:** Algoritmo inteligente de IA que corrige e aproxima nomes de locais digitados com erro pelo usuário, baseando-se em um dicionário de dados local e privado da instituição.
+* 📚 **Intelligent Reading:** The robot reads and understands tasks exactly as the analyst wrote them.
+* 📦 **Batch Execution:** Capable of linking multiple assets to a ticket simultaneously.
+* ⚡ **Direct API Communication:** Performs all operations directly via GLPI's REST API (fast and transparent).
+* 🦡 **Automatic Reply:** Automatically replies to the ticket confirming the operation's success.
+* 📊 **Audit Trail:** Automatically attaches `ITX_Relatorio.csv` with detailed logs and action statuses.
+* 🎯 **Location Fuzzy Matching:** AI-powered algorithm that intelligently corrects and maps location names entered with typos, using the institution's internal data dictionary.
 
 ---
 
-## 🚀 Como Executar
+## 🚀 Getting Started
 
-Siga os passos abaixo para preparar o seu ambiente e rodar o projeto localmente:
+Follow the steps below to set up your environment and run the project locally:
 
-### 📋 Pré-requisitos
-* **Python 3.8+** instalado na máquina.
-* **Git** para clonar o repositório.
-* Credenciais de acesso à **API do GLPI**.
+### 📋 Prerequisites
+* **Python 3.8+** installed.
+* **Git** for cloning the repository.
+* Access credentials for the **GLPI API**.
 
-### ⚙️ Instalação
+### ⚙️ Installation
 
-**1. Clone o repositório:**
+**1. Clone the repository:**
 ```bash
 git clone https://github.com/ITX-Duda/ITXAutoNTI.git
 cd ITXAutoNTI
 ```
 
-**2. Crie e ative um ambiente virtual (Recomendado):**
+**2. Create and activate a virtual environment (Recommended):**
 ```bash
-# No Windows
+# On Windows
 python -m venv venv
 .\venv\Scripts\activate
 
-# No Linux/Mac
+# On Linux/Mac
 python3 -m venv venv
 source venv/bin/activate
 ```
 
-**3. Instale as dependências:**
+**3. Install dependencies:**
 ```bash
 pip install -r requirements.txt
 ```
 
-**4. Configure as chaves de segurança e o ambiente:**
-Crie ou edite o arquivo `.env` (ou dentro da pasta `config/`) e adicione **obrigatoriamente** as seguintes credenciais da API do GLPI:
+**4. Configure security keys and environment:**
+Create or edit the `.env` file (inside the `config/` folder) and add the following **required** GLPI API credentials:
 ```env
-GLPI_API_URL="https://caminho-do-seu-glpi/apirest.php"
-GLPI_APP_TOKEN="seu_app_token_gerado_no_glpi"
-GLPI_USER_TOKEN="seu_user_token_gerado_no_glpi"
+GLPI_API_URL="https://your-glpi-instance/apirest.php"
+GLPI_APP_TOKEN="your_app_token_from_glpi"
+GLPI_USER_TOKEN="your_user_token_from_glpi"
 ```
-> **⚠️ Importante sobre o Fuzzy Matching (Arquivo Privado):** 
-> O motor de correção inteligente de localizações precisa consultar um arquivo chamado `localizacao.csv` alocado na pasta `src/logic/`. Por conter o mapeamento interno da infraestrutura da instituição, **este arquivo é sigiloso e não faz parte do repositório público**. Quem for instalar ou realizar o deploy da aplicação deverá gerar e providenciar essa base em CSV contendo os locais internos para que a engine funcione corretamente.
+> **⚠️ Note on Fuzzy Matching (Private File):**
+> The location correction engine requires a file named `localizacao.csv` in the `src/logic/` folder. Because it contains the internal infrastructure mapping of the institution, **this file is confidential and is not part of the public repository**. Anyone deploying this application must generate and provide their own CSV file with their institution's internal locations.
 
-**5. Inicie a engine:**
+**5. Start the engine:**
 ```bash
 python main.py
 ```
 
 ---
 
-## 📄 Publicação Científica
+## 📄 Scientific Publication
 
-Este projeto foi apresentado no **WTIFICES 2026** (Workshop de Trabalhos de Iniciação em Computação e Sistemas) e documentado no seguinte artigo científico:
+This project was presented at **WTIFICES 2026** (Workshop on Undergraduate Work in Computer Science and Systems, CSBC 2026) and documented in the following scientific paper:
 
-> **Automação e Otimização de Processos de TI na UFABC: O Desenvolvimento e Implementação do ITXAutoNTI**
+> **Automation and Optimization of IT Processes at UFABC: The Development and Implementation of ITXAutoNTI**
 > M. E. A. B. Brito, E. F. Lima, B. B. Bianchi, P. H. de Lima Franca, F. D. C. Iglesias
 > *Workshop de Trabalhos de Iniciação em Computação e Sistemas (WTIFICES), CSBC 2026*
 
-📎 [Artigo completo (PDF)](./Artigo_WTIFICES_ITXAutoNTI.pdf)
+📎 [Full paper (PDF)](./Artigo_WTIFICES_ITXAutoNTI.pdf)
 
 ---
 
-## 👨‍💻 Autores e Inventores
-
-Este projeto é fruto da pesquisa, dedicação e genialidade de uma equipe focada em otimização. Um grande *salve* para os criadores do **ITXAutoNTI**:
+## 👨‍💻 Authors
 
 <table align="center" border="0">
   <tr>
@@ -147,28 +152,28 @@ Este projeto é fruto da pesquisa, dedicação e genialidade de uma equipe focad
 
 ---
 
-## ⚖️ Propriedade Intelectual e Licenciamento
+## ⚖️ Intellectual Property & Licensing
 
-**Registro de Propriedade Intelectual:**
-O código-fonte, arquitetura, design e lógica do sistema **ITXAutoNTI** constituem patrimônio intelectual desenvolvido pela equipe supracitada. Este repositório reflete a versão oficial `v1.1.0` para fins de registro formal e documentação de autoria.
+**Intellectual Property Notice:**
+The source code, architecture, design, and logic of **ITXAutoNTI** constitute intellectual property developed by the team listed above. This repository reflects the official `v1.1.0` release for formal registration and authorship documentation purposes.
 
-**Aviso de Direitos:**
-© 2026 Equipe ITXAutoNTI. 
-Todos os direitos reservados. O uso, modificação ou distribuição de partes ou da totalidade deste software deve respeitar as condições estabelecidas no modelo de licenciamento aplicável a este repositório.
+**Rights Notice:**
+© 2026 ITXAutoNTI Team.
+All rights reserved. Any use, modification, or distribution of parts or the entirety of this software must comply with the conditions established in the applicable licensing model for this repository.
 
 ---
 
-## 🙏 Créditos e Referências
+## 🙏 Credits & References
 
-| Projeto | Uso no ITXAutoNTI |
+| Project | Usage in ITXAutoNTI |
 |---|---|
-| [giovanny07/python-glpi-utils](https://github.com/giovanny07/python-glpi-utils) | Referência arquitetural para a implementação da paginação dinâmica da API do GLPI (solução para o limite de 50 itens por requisição) |
-| [rapidfuzz/RapidFuzz](https://github.com/rapidfuzz/RapidFuzz) | Motor de fuzzy matching para correção inteligente de localizações |
-| [encode/httpx](https://github.com/encode/httpx) | Cliente HTTP moderno utilizado para comunicação estável com a API |
+| [giovanny07/python-glpi-utils](https://github.com/giovanny07/python-glpi-utils) | Architectural reference for implementing dynamic API pagination (overcoming GLPI's native 50-item limit) |
+| [rapidfuzz/RapidFuzz](https://github.com/rapidfuzz/RapidFuzz) | Fuzzy matching engine for intelligent location correction |
+| [encode/httpx](https://github.com/encode/httpx) | Modern HTTP client for stable API communication |
 
 ---
 
 <p align="center">
   <img src="https://img.icons8.com/neon/96/bot.png" width="32px" alt="bot"><br>
-  <b>Desenvolvido pela Equipe ITXAutoNTI!</b><br>
+  <b>Built by the ITXAutoNTI Team!</b><br>
 </p>

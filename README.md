@@ -158,6 +158,16 @@ Todos os direitos reservados. O uso, modificação ou distribuição de partes o
 
 ---
 
+## 🙏 Créditos e Referências
+
+| Projeto | Uso no ITXAutoNTI |
+|---|---|
+| [giovanny07/python-glpi-utils](https://github.com/giovanny07/python-glpi-utils) | Referência arquitetural para a implementação da paginação dinâmica da API do GLPI (solução para o limite de 50 itens por requisição) |
+| [rapidfuzz/RapidFuzz](https://github.com/rapidfuzz/RapidFuzz) | Motor de fuzzy matching para correção inteligente de localizações |
+| [encode/httpx](https://github.com/encode/httpx) | Cliente HTTP moderno utilizado para comunicação estável com a API |
+
+---
+
 <p align="center">
   <img src="https://img.icons8.com/neon/96/bot.png" width="32px" alt="bot"><br>
   <b>Desenvolvido pela Equipe ITXAutoNTI!</b><br>
